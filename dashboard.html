@@ -176,6 +176,19 @@
 
             <!-- History Screen -->
             <section id="historyScreen" class="history-screen">
+                <div id="statsSection" class="stats-overview" style="margin-bottom: 2rem; display: none;">
+                    <h3 style="margin-bottom: 1rem; color: var(--secondary-color);">Top Performers</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="glass-card" style="padding: 1rem; text-align: center;">
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Top Batsman</div>
+                            <div id="topBatsman" style="font-weight: 800; color: var(--primary-color);">N/A</div>
+                        </div>
+                        <div class="glass-card" style="padding: 1rem; text-align: center;">
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Top Bowler</div>
+                            <div id="topBowler" style="font-weight: 800; color: var(--secondary-color);">N/A</div>
+                        </div>
+                    </div>
+                </div>
                 <h2 style="margin-bottom: 1.5rem;">Match History</h2>
                 <div id="historyList" class="history-list"></div>
                 <button class="btn" style="margin-top: 1rem; background: rgba(255,255,255,0.05); color: white;"
