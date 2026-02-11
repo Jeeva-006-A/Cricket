@@ -49,6 +49,20 @@
                     <label>Opening Bowler</label>
                     <input type="text" id="initBowler" placeholder="Bowler Name">
                 </div>
+                <div class="form-group">
+                    <label>Toss Won By</label>
+                    <select id="tossWinner" class="btn" style="background: rgba(255,255,255,0.05); color: white; width: 100%; border: 1px solid rgba(255,255,255,0.1); padding: 0.8rem; border-radius: 12px; margin-top: 0.5rem;">
+                        <option value="Team A">Team A</option>
+                        <option value="Team B">Team B</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Toss Decision</label>
+                    <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+                        <label style="flex: 1;"><input type="radio" name="tossDecision" value="Bat" checked> Bat</label>
+                        <label style="flex: 1;"><input type="radio" name="tossDecision" value="Bowl"> Bowl</label>
+                    </div>
+                </div>
                 <button class="btn btn-primary" onclick="startMatch()">Start Match</button>
                 <div style="text-align: center; margin-top: 1.5rem;">
                     <a href="#" onclick="showHistory()"
@@ -61,9 +75,20 @@
             <section id="matchScreen" class="match-screen">
                 <div class="scoreboard">
                     <div class="team-names" id="displayTeams">Team A vs Team B</div>
+                    <div id="tossInfo" style="font-size: 0.8rem; color: var(--secondary-color); margin-bottom: 0.5rem;">Toss Info</div>
                     <div class="score-main"><span id="runs">0</span> / <span id="wickets">0</span></div>
                     <div class="overs-display">Overs: <span id="oversCompleted">0</span>.<span id="ballsInOver">0</span>
                         (<span id="maxOvers">0</span>)</div>
+                    <div id="rrInfo" style="display: flex; justify-content: center; gap: 2rem; margin-top: 1rem; font-size: 0.9rem; font-weight: 600;">
+                        <span>CRR: <span id="crr">0.00</span></span>
+                        <span id="rrrContainer" style="display: none;">RRR: <span id="rrr">0.00</span></span>
+                    </div>
+                </div>
+
+                <!-- Partnership Display -->
+                <div class="glass-card" style="padding: 0.8rem; margin-bottom: 1.5rem; text-align: center; border: 1px solid rgba(0, 255, 136, 0.2);">
+                    <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Current Partnership</div>
+                    <div id="currentPartnership" style="font-size: 1.1rem; font-weight: 700; color: var(--primary-color);">0 (0)</div>
                 </div>
                 <!-- Mini Player Stats -->
                 <div class="players-display">

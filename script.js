@@ -6,10 +6,10 @@ let authToken = localStorage.getItem('authToken');
 
 // Global Game State
 let gameState = {
-    teamA: '', teamB: '', maxOvers: 0, currentInnings: 1,
+    teamA: '', teamB: '', maxOvers: 0, currentInnings: 1, toss: '',
     innings: [null,
-        { teamName: '', runs: 0, wickets: 0, balls: 0, batters: [], bowlers: [], extras: { wd: 0, nb: 0, lb: 0, b: 0, total: 0 }, fow: [], strikerIdx: 0, nonStrikerIdx: 1, bowlerIdx: 0 },
-        { teamName: '', runs: 0, wickets: 0, balls: 0, batters: [], bowlers: [], extras: { wd: 0, nb: 0, lb: 0, b: 0, total: 0 }, fow: [], strikerIdx: 0, nonStrikerIdx: 1, bowlerIdx: 0 }
+        { teamName: '', runs: 0, wickets: 0, balls: 0, batters: [], bowlers: [], extras: { wd: 0, nb: 0, lb: 0, b: 0, total: 0 }, fow: [], strikerIdx: 0, nonStrikerIdx: 1, bowlerIdx: 0, partnershipRuns: 0, partnershipBalls: 0 },
+        { teamName: '', runs: 0, wickets: 0, balls: 0, batters: [], bowlers: [], extras: { wd: 0, nb: 0, lb: 0, b: 0, total: 0 }, fow: [], strikerIdx: 0, nonStrikerIdx: 1, bowlerIdx: 0, partnershipRuns: 0, partnershipBalls: 0 }
     ],
     target: null, viewingInnings: 1
 };
@@ -81,20 +81,32 @@ function startMatch() {
     const tA = document.getElementById('teamA').value;
     const tB = document.getElementById('teamB').value;
     const ov = document.getElementById('totalOvers').value;
+    const tossW = document.getElementById('tossWinner').value;
+    const tossD = document.querySelector('input[name="tossDecision"]:checked').value;
+
     if (!tA || !tB || !ov) return alert('Fill all fields!');
 
-    gameState.teamA = tA; gameState.teamB = tB; gameState.maxOvers = parseInt(ov);
+    gameState.teamA = tA;
+    gameState.teamB = tB;
+    gameState.maxOvers = parseInt(ov);
 
-    // Init Innings 1
-    gameState.innings[1].teamName = tA;
+    const tossWinnerName = tossW === 'Team A' ? tA : tB;
+    gameState.toss = `${tossWinnerName} won the toss and elected to ${tossD}`;
+    document.getElementById('tossInfo').innerText = gameState.toss;
+
+    // Set first innings team based on toss
+    const firstInningsTeam = (tossD === 'Bat') ? tossWinnerName : (tossWinnerName === tA ? tB : tA);
+    gameState.innings[1].teamName = firstInningsTeam;
+    gameState.innings[2].teamName = (firstInningsTeam === tA ? tB : tA);
+
     gameState.innings[1].batters = [
-        { name: document.getElementById('initStriker').value || 'Batter 1', runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false },
-        { name: document.getElementById('initNonStriker').value || 'Batter 2', runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false }
+        { name: document.getElementById('initStriker').value || 'Striker', runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false },
+        { name: document.getElementById('initNonStriker').value || 'Non-Striker', runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false }
     ];
-    gameState.innings[1].bowlers = [
-        { name: document.getElementById('initBowler').value || 'Bowler 1', balls: 0, maidens: 0, runs: 0, wickets: 0 }
-    ];
+    gameState.innings[1].bowlers = [{ name: document.getElementById('initBowler').value || 'Bowler', balls: 0, maidens: 0, runs: 0, wickets: 0 }];
 
+    document.getElementById('displayTeams').innerText = `${tA} vs ${tB}`;
+    document.getElementById('maxOvers').innerText = ov;
     switchScreen('matchScreen');
     updateDisplay();
 }
@@ -102,6 +114,7 @@ function startMatch() {
 function addRuns(run) {
     const inn = gameState.innings[gameState.currentInnings];
     inn.runs += run; inn.balls++;
+    inn.partnershipRuns += run; inn.partnershipBalls++;
     const s = inn.batters[inn.strikerIdx];
     s.runs += run; s.balls++;
     if (run === 4) s.fours++; if (run === 6) s.sixes++;
@@ -117,6 +130,7 @@ function addRuns(run) {
 function addExtra(type) {
     const inn = gameState.innings[gameState.currentInnings];
     inn.runs++; inn.extras.total++;
+    inn.partnershipRuns++;
     if (type === 'WD') inn.extras.wd++; else inn.extras.nb++;
     inn.bowlers[inn.bowlerIdx].runs++;
     thisOverBalls.push({ type: 'extra', value: type, label: type });
@@ -135,6 +149,10 @@ function handleWicketSelect(type) {
     inn.wickets++;
     const bOut = inn.batters[outIdx];
     bOut.isOut = true;
+
+    // Reset partnership on wicket
+    inn.partnershipRuns = 0;
+    inn.partnershipBalls = 0;
 
     if (type !== 'Run Out') {
         bOut.balls++;
@@ -193,8 +211,25 @@ function updateDisplay() {
     document.getElementById('maxOvers').innerText = gameState.maxOvers;
     document.getElementById('displayTeams').innerText = `${gameState.teamA} vs ${gameState.teamB}`;
 
+    // Run Rate Calculations
+    const crr = inn.balls > 0 ? (inn.runs / (inn.balls / 6)).toFixed(2) : '0.00';
+    document.getElementById('crr').innerText = crr;
+
+    if (gameState.currentInnings === 2 && gameState.target) {
+        const ballsLeft = (gameState.maxOvers * 6) - inn.balls;
+        const runsToWin = gameState.target - inn.runs;
+        if (ballsLeft > 0) {
+            const rrr = (runsToWin / (ballsLeft / 6)).toFixed(2);
+            document.getElementById('rrr').innerText = rrr;
+            document.getElementById('rrrContainer').style.display = 'inline';
+        }
+    }
+
+    // Partnership Update
+    document.getElementById('currentPartnership').innerText = `${inn.partnershipRuns} (${inn.partnershipBalls})`;
+
     if (inn.strikerIdx !== -1) {
-        document.getElementById('strikerName').innerText = inn.batters[inn.strikerIdx].name;
+        document.getElementById('strikerName').innerText = inn.batters[inn.strikerIdx].name + '*';
         document.getElementById('strikerRuns').innerText = `${inn.batters[inn.strikerIdx].runs}(${inn.batters[inn.strikerIdx].balls})`;
     }
     if (inn.nonStrikerIdx !== -1) {
@@ -214,7 +249,7 @@ function updateDisplay() {
     });
     document.getElementById('battingBody').innerHTML = bHtml;
     document.getElementById('extrasValue').innerText = vI.extras.total;
-    document.getElementById('totalScoreValue').innerText = `${vI.runs}/${vI.wickets}`;
+    document.getElementById('totalScoreValue').innerText = `${vI.runs}/${vI.wickets} (${Math.floor(vI.balls / 6)}.${vI.balls % 6} ov)`;
 
     let bowlHtml = '';
     vI.bowlers.forEach(bowl => {
