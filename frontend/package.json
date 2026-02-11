@@ -1,0 +1,10 @@
+{
+    "name": "cricket-frontend",
+    "version": "1.0.0",
+    "description": "Frontend for CricScore Pro",
+    "main": "index.html",
+    "scripts": {
+        "start": "npx serve ."
+    },
+    "dependencies": {}
+}
