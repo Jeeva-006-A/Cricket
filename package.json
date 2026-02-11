@@ -1,10 +1,18 @@
 {
-    "name": "cricket-frontend",
+    "name": "cricket-pro-fullstack",
     "version": "1.0.0",
-    "description": "Frontend for CricScore Pro",
-    "main": "index.html",
+    "description": "Premium Cricket Score Tracker",
+    "main": "server.js",
     "scripts": {
-        "start": "npx serve ."
+        "start": "node server.js",
+        "dev": "nodemon server.js"
     },
-    "dependencies": {}
+    "dependencies": {
+        "express": "^4.18.2",
+        "cors": "^2.8.5",
+        "sqlite3": "^5.1.6",
+        "bcryptjs": "^2.4.3",
+        "jsonwebtoken": "^9.0.0",
+        "dotenv": "^16.0.3"
+    }
 }
