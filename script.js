@@ -1,0 +1,281 @@
+// CricScore Pro Logic - Multi-Page Version
+
+const API_BASE = `${window.location.origin}/api`;
+let currentUser = localStorage.getItem('username');
+let authToken = localStorage.getItem('authToken');
+
+// Global Game State
+let gameState = {
+    teamA: '', teamB: '', maxOvers: 0, currentInnings: 1,
+    innings: [null,
+        { teamName: '', runs: 0, wickets: 0, balls: 0, batters: [], bowlers: [], extras: { wd: 0, nb: 0, lb: 0, b: 0, total: 0 }, fow: [], strikerIdx: 0, nonStrikerIdx: 1, bowlerIdx: 0 },
+        { teamName: '', runs: 0, wickets: 0, balls: 0, batters: [], bowlers: [], extras: { wd: 0, nb: 0, lb: 0, b: 0, total: 0 }, fow: [], strikerIdx: 0, nonStrikerIdx: 1, bowlerIdx: 0 }
+    ],
+    target: null, viewingInnings: 1
+};
+
+let thisOverBalls = [];
+
+// Auth Logic
+async function handleLogin() {
+    const u = document.getElementById('loginUsername').value;
+    const p = document.getElementById('loginPassword').value;
+    if (!u || !p) return alert('Username and Password required');
+
+    try {
+        const res = await fetch(API_BASE + '/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: u, password: p })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('username', data.username);
+        window.location.href = 'dashboard.html';
+    } catch (err) { alert(err.message); }
+}
+
+async function handleSignup() {
+    const u = document.getElementById('signupUsername').value;
+    const p = document.getElementById('signupPassword').value;
+    if (!u || !p) return alert('Username and Password required');
+
+    try {
+        const res = await fetch(API_BASE + '/signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: u, password: p })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        alert('Signup Success! Please Login.');
+        window.location.href = 'login.html';
+    } catch (err) { alert(err.message); }
+}
+
+function logout() {
+    localStorage.clear();
+    window.location.href = 'login.html';
+}
+
+// Page Load Logic
+window.onload = () => {
+    const path = window.location.pathname;
+    if (path.includes('dashboard.html')) {
+        if (!authToken) window.location.href = 'login.html';
+        document.getElementById('userWelcome').innerText = `Welcome, ${currentUser}!`;
+    } else if (path.includes('login.html') || path.includes('signup.html')) {
+        if (authToken) window.location.href = 'dashboard.html';
+    } else {
+        // Root redirect
+        window.location.href = authToken ? 'dashboard.html' : 'login.html';
+    }
+};
+
+// --- CRICKET LOGIC --- (Reused from previous version)
+
+function startMatch() {
+    const tA = document.getElementById('teamA').value;
+    const tB = document.getElementById('teamB').value;
+    const ov = document.getElementById('totalOvers').value;
+    if (!tA || !tB || !ov) return alert('Fill all fields!');
+
+    gameState.teamA = tA; gameState.teamB = tB; gameState.maxOvers = parseInt(ov);
+
+    // Init Innings 1
+    gameState.innings[1].teamName = tA;
+    gameState.innings[1].batters = [
+        { name: document.getElementById('initStriker').value || 'Batter 1', runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false },
+        { name: document.getElementById('initNonStriker').value || 'Batter 2', runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false }
+    ];
+    gameState.innings[1].bowlers = [
+        { name: document.getElementById('initBowler').value || 'Bowler 1', balls: 0, maidens: 0, runs: 0, wickets: 0 }
+    ];
+
+    switchScreen('matchScreen');
+    updateDisplay();
+}
+
+function addRuns(run) {
+    const inn = gameState.innings[gameState.currentInnings];
+    inn.runs += run; inn.balls++;
+    const s = inn.batters[inn.strikerIdx];
+    s.runs += run; s.balls++;
+    if (run === 4) s.fours++; if (run === 6) s.sixes++;
+
+    const b = inn.bowlers[inn.bowlerIdx];
+    b.runs += run; b.balls++;
+
+    thisOverBalls.push({ type: 'run', value: run, label: run === 0 ? '.' : run.toString() });
+    if (run % 2 !== 0) rotateStrike();
+    checkOverEnd(); updateDisplay(); checkInningsEnd();
+}
+
+function addExtra(type) {
+    const inn = gameState.innings[gameState.currentInnings];
+    inn.runs++; inn.extras.total++;
+    if (type === 'WD') inn.extras.wd++; else inn.extras.nb++;
+    inn.bowlers[inn.bowlerIdx].runs++;
+    thisOverBalls.push({ type: 'extra', value: type, label: type });
+    updateDisplay(); checkInningsEnd();
+}
+
+function addWicket() { document.getElementById('wicketModal').style.display = 'flex'; }
+function closeWicketModal() { document.getElementById('wicketModal').style.display = 'none'; }
+
+function handleWicketSelect(type) {
+    closeWicketModal();
+    const inn = gameState.innings[gameState.currentInnings];
+    let outIdx = inn.strikerIdx;
+    if (type === 'Run Out') outIdx = confirm(`Striker (${inn.batters[inn.strikerIdx].name}) Out?`) ? inn.strikerIdx : inn.nonStrikerIdx;
+
+    inn.wickets++;
+    const bOut = inn.batters[outIdx];
+    bOut.isOut = true;
+
+    if (type !== 'Run Out') {
+        bOut.balls++;
+        let f = (type === 'Caught' || type === 'Stumped') ? prompt(`Fielder Name?`, 'Fielder') : '';
+        if (type === 'Bowled') bOut.outDesc = `b ${inn.bowlers[inn.bowlerIdx].name}`;
+        else if (type === 'Caught') bOut.outDesc = `c ${f} b ${inn.bowlers[inn.bowlerIdx].name}`;
+        else bOut.outDesc = `${type} b ${inn.bowlers[inn.bowlerIdx].name}`;
+        inn.bowlers[inn.bowlerIdx].wickets++;
+        inn.bowlers[inn.bowlerIdx].balls++;
+        inn.balls++;
+    } else {
+        bOut.outDesc = 'run out';
+        inn.bowlers[inn.bowlerIdx].balls++;
+        inn.balls++;
+    }
+
+    thisOverBalls.push({ type: 'wicket', value: 'W', label: 'W' });
+    if (inn.wickets < 10) {
+        let n = prompt('New Batter Name?', `Batter ${inn.batters.length + 1}`);
+        inn.batters.push({ name: n || 'Batter', runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false });
+        if (outIdx === inn.strikerIdx) inn.strikerIdx = inn.batters.length - 1;
+        else inn.nonStrikerIdx = inn.batters.length - 1;
+    }
+    updateDisplay(); checkOverEnd(); checkInningsEnd();
+}
+
+function rotateStrike() {
+    const inn = gameState.innings[gameState.currentInnings];
+    [inn.strikerIdx, inn.nonStrikerIdx] = [inn.nonStrikerIdx, inn.strikerIdx];
+}
+
+function checkOverEnd() {
+    const inn = gameState.innings[gameState.currentInnings];
+    if (inn.balls > 0 && inn.balls % 6 === 0) {
+        setTimeout(() => {
+            alert('Over Over!'); rotateStrike();
+            let n = prompt('Next Bowler?', 'Bowler');
+            let idx = inn.bowlers.findIndex(b => b.name === n);
+            if (idx === -1) {
+                inn.bowlers.push({ name: n || 'Bowler', balls: 0, maidens: 0, runs: 0, wickets: 0 });
+                idx = inn.bowlers.length - 1;
+            }
+            inn.bowlerIdx = idx;
+            thisOverBalls = [];
+            updateDisplay();
+        }, 200);
+    }
+}
+
+function updateDisplay() {
+    const inn = gameState.innings[gameState.currentInnings];
+    document.getElementById('runs').innerText = inn.runs;
+    document.getElementById('wickets').innerText = inn.wickets;
+    document.getElementById('oversCompleted').innerText = Math.floor(inn.balls / 6);
+    document.getElementById('ballsInOver').innerText = inn.balls % 6;
+    document.getElementById('maxOvers').innerText = gameState.maxOvers;
+    document.getElementById('displayTeams').innerText = `${gameState.teamA} vs ${gameState.teamB}`;
+
+    if (inn.strikerIdx !== -1) {
+        document.getElementById('strikerName').innerText = inn.batters[inn.strikerIdx].name;
+        document.getElementById('strikerRuns').innerText = `${inn.batters[inn.strikerIdx].runs}(${inn.batters[inn.strikerIdx].balls})`;
+    }
+    if (inn.nonStrikerIdx !== -1) {
+        document.getElementById('nonStrikerName').innerText = inn.batters[inn.nonStrikerIdx].name;
+        document.getElementById('nonStrikerRuns').innerText = `${inn.batters[inn.nonStrikerIdx].runs}(${inn.batters[inn.nonStrikerIdx].balls})`;
+    }
+    const b = inn.bowlers[inn.bowlerIdx];
+    document.getElementById('bowlerName').innerText = b.name;
+    document.getElementById('bowlerStats').innerText = `${b.wickets}-${b.runs} (${Math.floor(b.balls / 6)}.${b.balls % 6} ov)`;
+
+    // Scorecard Update
+    const vI = gameState.innings[gameState.viewingInnings];
+    let bHtml = '';
+    vI.batters.forEach((bat, i) => {
+        const sr = bat.balls > 0 ? (bat.runs / bat.balls * 100).toFixed(2) : '0.00';
+        bHtml += `<tr><td>${bat.name}${i === vI.strikerIdx && gameState.currentInnings === gameState.viewingInnings ? '*' : ''}</td><td>${bat.runs}</td><td>${bat.balls}</td><td>${bat.fours}</td><td>${bat.sixes}</td><td>${sr}</td></tr>`;
+    });
+    document.getElementById('battingBody').innerHTML = bHtml;
+    document.getElementById('extrasValue').innerText = vI.extras.total;
+    document.getElementById('totalScoreValue').innerText = `${vI.runs}/${vI.wickets}`;
+
+    let bowlHtml = '';
+    vI.bowlers.forEach(bowl => {
+        const eco = bowl.balls > 0 ? (bowl.runs / (bowl.balls / 6)).toFixed(2) : '0.00';
+        bowlHtml += `<tr><td>${bowl.name}</td><td>${Math.floor(bowl.balls / 6)}.${bowl.balls % 6}</td><td>${bowl.maidens}</td><td>${bowl.runs}</td><td>${bowl.wickets}</td><td>${eco}</td></tr>`;
+    });
+    document.getElementById('bowlingBody').innerHTML = bowlHtml;
+}
+
+function checkInningsEnd() {
+    const inn = gameState.innings[gameState.currentInnings];
+    if (gameState.currentInnings === 2 && gameState.target && inn.runs >= gameState.target) return endMatchManually();
+    if (inn.balls >= gameState.maxOvers * 6 || inn.wickets >= 10) {
+        if (gameState.currentInnings === 1) {
+            gameState.target = inn.runs + 1;
+            document.getElementById('nextInningsBtn').style.display = 'block';
+            alert(`Innings Over! Target: ${gameState.target}`);
+        } else endMatchManually();
+    }
+}
+
+function startSecondInnings() {
+    gameState.currentInnings = 2;
+    const inn = gameState.innings[2];
+    inn.teamName = gameState.teamB;
+    inn.batters = [
+        { name: prompt('Opener 1', 'Batter 1') || 'Batter 1', runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false },
+        { name: prompt('Opener 2', 'Batter 2') || 'Batter 2', runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false }
+    ];
+    inn.bowlers = [{ name: prompt('Opening Bowler', 'Bowler') || 'Bowler', balls: 0, maidens: 0, runs: 0, wickets: 0 }];
+    document.getElementById('nextInningsBtn').style.display = 'none';
+    thisOverBalls = [];
+    updateDisplay();
+}
+
+function endMatchManually() { calculateResult(); switchScreen('resultScreen'); }
+
+async function calculateResult() {
+    const s1 = gameState.innings[1]; const s2 = gameState.innings[2];
+    let res = (s2.runs >= gameState.target) ? `${gameState.teamB} wins` : (s1.runs > s2.runs) ? `${gameState.teamA} wins` : "Match Tie";
+    document.getElementById('matchOutcome').innerText = res.toUpperCase();
+
+    await fetch(API_BASE + '/matches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': authToken },
+        body: JSON.stringify({ teamA: gameState.teamA, teamB: gameState.teamB, scoreData: gameState.innings, result: res })
+    });
+}
+
+async function showHistory() {
+    const res = await fetch(API_BASE + '/matches', { headers: { 'Authorization': authToken } });
+    const history = await res.json();
+    let hHtml = '';
+    history.forEach((m, idx) => {
+        hHtml += `<div class="history-item" onclick="showMatchDetail(${idx})"><b>${m.team_a} vs ${m.team_b}</b><br>${m.result}</div>`;
+    });
+    document.getElementById('historyList').innerHTML = hHtml;
+    switchScreen('historyScreen');
+}
+
+function switchScreen(id) {
+    document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
