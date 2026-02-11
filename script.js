@@ -1,8 +1,33 @@
 // CricScore Pro Logic - Multi-Page Version
 
-const API_BASE = `${window.location.origin}/api`;
+// CHANGE THIS to your Render URL after deploying the backend (e.g., https://cricket-backend.onrender.com/api)
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? '/api'
+    : `${window.location.origin}/api`;
+
 let currentUser = localStorage.getItem('username');
 let authToken = localStorage.getItem('authToken');
+
+// Helper to handle API responses safely
+async function apiCall(endpoint, options = {}) {
+    const response = await fetch(API_BASE + endpoint, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authToken,
+            ...options.headers
+        }
+    });
+
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.indexOf("application/json") !== -1) {
+        return await response.json();
+    } else {
+        const text = await response.text();
+        console.error("Non-JSON response received:", text);
+        throw new Error("Backend Server not responding correctly. Are you sure the backend is running?");
+    }
+}
 
 // Global Game State
 let gameState = {
@@ -23,13 +48,10 @@ async function handleLogin() {
     if (!u || !p) return alert('Username and Password required');
 
     try {
-        const res = await fetch(API_BASE + '/login', {
+        const data = await apiCall('/login', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: u, password: p })
         });
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
 
         localStorage.setItem('authToken', data.token);
         localStorage.setItem('username', data.username);
@@ -43,14 +65,10 @@ async function handleSignup() {
     if (!u || !p) return alert('Username and Password required');
 
     try {
-        const res = await fetch(API_BASE + '/signup', {
+        await apiCall('/signup', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: u, password: p })
         });
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-
         alert('Signup Success! Please Login.');
         window.location.href = 'login.html';
     } catch (err) { alert(err.message); }
@@ -292,22 +310,93 @@ async function calculateResult() {
     let res = (s2.runs >= gameState.target) ? `${gameState.teamB} wins` : (s1.runs > s2.runs) ? `${gameState.teamA} wins` : "Match Tie";
     document.getElementById('matchOutcome').innerText = res.toUpperCase();
 
-    await fetch(API_BASE + '/matches', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': authToken },
-        body: JSON.stringify({ teamA: gameState.teamA, teamB: gameState.teamB, scoreData: gameState.innings, result: res })
-    });
+    try {
+        await apiCall('/matches', {
+            method: 'POST',
+            body: JSON.stringify({ teamA: gameState.teamA, teamB: gameState.teamB, scoreData: gameState.innings, result: res })
+        });
+    } catch (err) { console.error("Could not save match to DB:", err.message); }
 }
 
+let matchHistoryData = [];
+
 async function showHistory() {
-    const res = await fetch(API_BASE + '/matches', { headers: { 'Authorization': authToken } });
-    const history = await res.json();
-    let hHtml = '';
-    history.forEach((m, idx) => {
-        hHtml += `<div class="history-item" onclick="showMatchDetail(${idx})"><b>${m.team_a} vs ${m.team_b}</b><br>${m.result}</div>`;
+    try {
+        matchHistoryData = await apiCall('/matches');
+        let hHtml = '';
+
+        let playerRuns = {};
+        let playerWkts = {};
+
+        matchHistoryData.forEach((m, idx) => {
+            hHtml += `<div class="history-item" onclick="showMatchDetail(${idx})"><b>${m.team_a} vs ${m.team_b}</b><br>${m.result}</div>`;
+
+            // Extract stats from match data
+            const data = m.score_data;
+            [1, 2].forEach(innIdx => {
+                const inn = data[innIdx];
+                if (inn) {
+                    inn.batters.forEach(b => {
+                        playerRuns[b.name] = (playerRuns[b.name] || 0) + b.runs;
+                    });
+                    inn.bowlers.forEach(bw => {
+                        playerWkts[bw.name] = (playerWkts[bw.name] || 0) + bw.wickets;
+                    });
+                }
+            });
+        });
+
+        // Top Performers Logic
+        let topB = Object.keys(playerRuns).reduce((a, b) => playerRuns[a] > playerRuns[b] ? a : b, null);
+        let topW = Object.keys(playerWkts).reduce((a, b) => playerWkts[a] > playerWkts[b] ? a : b, null);
+
+        if (topB) {
+            document.getElementById('topBatsman').innerText = `${topB} (${playerRuns[topB]} Runs)`;
+            document.getElementById('topBowler').innerText = `${topW} (${playerWkts[topW]} Wkts)`;
+            document.getElementById('statsSection').style.display = 'block';
+        }
+
+        document.getElementById('historyList').innerHTML = hHtml;
+        switchScreen('historyScreen');
+    } catch (err) { alert('Error loading history: ' + err.message); }
+}
+
+function showMatchDetail(idx) {
+    const m = matchHistoryData[idx];
+    document.getElementById('detailMatchTitle').innerText = `${m.team_a} vs ${m.team_b}`;
+    document.getElementById('detailMatchResult').innerText = m.result.toUpperCase();
+
+    // Storing full data temporarily to switch tabs
+    window.currentDetailInnings = m.score_data;
+    switchDetailScorecard(1);
+    switchScreen('matchDetailScreen');
+}
+
+function switchDetailScorecard(innIdx) {
+    const inn = window.currentDetailInnings[innIdx];
+
+    document.getElementById('tabDetailInn1').classList.toggle('active', innIdx === 1);
+    document.getElementById('tabDetailInn2').classList.toggle('active', innIdx === 2);
+
+    if (!inn) {
+        document.getElementById('detailBattingBody').innerHTML = '<tr><td colspan="6" style="text-align:center;">Innings not played</td></tr>';
+        document.getElementById('detailBowlingBody').innerHTML = '';
+        return;
+    }
+
+    let bHtml = '';
+    inn.batters.forEach(bat => {
+        const sr = bat.balls > 0 ? (bat.runs / bat.balls * 100).toFixed(2) : '0.00';
+        bHtml += `<tr><td>${bat.name}</td><td>${bat.runs}</td><td>${bat.balls}</td><td>${bat.fours}</td><td>${bat.sixes}</td><td>${sr}</td></tr>`;
     });
-    document.getElementById('historyList').innerHTML = hHtml;
-    switchScreen('historyScreen');
+    document.getElementById('detailBattingBody').innerHTML = bHtml;
+
+    let bowlHtml = '';
+    inn.bowlers.forEach(bowl => {
+        const eco = bowl.balls > 0 ? (bowl.runs / (bowl.balls / 6)).toFixed(2) : '0.00';
+        bowlHtml += `<tr><td>${bowl.name}</td><td>${Math.floor(bowl.balls / 6)}.${bowl.balls % 6}</td><td>${bowl.maidens}</td><td>${bowl.runs}</td><td>${bowl.wickets}</td><td>${eco}</td></tr>`;
+    });
+    document.getElementById('detailBowlingBody').innerHTML = bowlHtml;
 }
 
 function switchScreen(id) {
