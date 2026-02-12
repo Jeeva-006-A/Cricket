@@ -105,8 +105,9 @@ async def get_matches(user_id: int = Depends(get_current_user)):
 
 # Static Files
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FRONTEND_DIR = os.path.join(BASE_DIR, "..", "LHF_Front_end")
-app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="static")
+FRONTEND_DIR = os.path.join(BASE_DIR, "..", "frontend")
+if os.path.exists(FRONTEND_DIR):
+    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="static")
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8080))
