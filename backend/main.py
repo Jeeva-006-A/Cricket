@@ -15,7 +15,11 @@ from schemas import UserAuth, MatchData
 app = FastAPI(title="CricScore Pro API")
 
 # Setup database
-init_db()
+try:
+    if os.getenv("DATABASE_URL"):
+        init_db()
+except Exception as e:
+    print(f"DB Init Error: {e}")
 
 # CORS configuration
 app.add_middleware(
@@ -35,6 +39,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 # API Routes
+@app.get("/api/health")
+async def health():
+    return {"status": "ok"}
+
 @app.post("/api/signup")
 async def signup(user: UserAuth):
     conn = get_db()
@@ -103,12 +111,13 @@ async def get_matches(user_id: int = Depends(get_current_user)):
     finally:
         conn.close()
 
-# Static Files
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FRONTEND_DIR = os.path.join(BASE_DIR, "..", "frontend")
-if os.path.exists(FRONTEND_DIR):
-    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="static")
+# Static Files - Vercel handles this via vercel.json rewrites
+# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# FRONTEND_DIR = os.path.join(BASE_DIR, "..", "frontend")
+# if os.path.exists(FRONTEND_DIR):
+#     app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="static")
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8080))
+    import uvicorn
     uvicorn.run("main:app", host="127.0.0.1", port=port, reload=True)

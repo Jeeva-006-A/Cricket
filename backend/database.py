@@ -8,7 +8,13 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_db():
-    conn = psycopg2.connect(DATABASE_URL)
+    # Supabase/PostgreSQL requires SSL mode usually
+    if "sslmode" not in DATABASE_URL:
+        # Append sslmode if not present in the URL
+        separator = "&" if "?" in DATABASE_URL else "?"
+        conn = psycopg2.connect(f"{DATABASE_URL}{separator}sslmode=require")
+    else:
+        conn = psycopg2.connect(DATABASE_URL)
     return conn
 
 def init_db():
