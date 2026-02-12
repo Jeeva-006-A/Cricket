@@ -111,11 +111,11 @@ async def get_matches(user_id: int = Depends(get_current_user)):
     finally:
         conn.close()
 
-# Static Files - Vercel handles this via vercel.json rewrites
-# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# FRONTEND_DIR = os.path.join(BASE_DIR, "..", "frontend")
-# if os.path.exists(FRONTEND_DIR):
-#     app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="static")
+# Static Files serving for local development
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "frontend"))
+if os.path.exists(FRONTEND_DIR):
+    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="static")
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8080))
