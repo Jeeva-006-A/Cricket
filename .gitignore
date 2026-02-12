@@ -6,7 +6,8 @@ dist/
 build/
 .agent/
 __pycache__/
-*.py[cod]
-*$py.class
-venv/
+*.pyc
+.pytest_cache/
 .venv/
+env/
+venv/
