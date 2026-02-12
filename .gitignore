@@ -5,3 +5,8 @@ node_modules/
 dist/
 build/
 .agent/
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/

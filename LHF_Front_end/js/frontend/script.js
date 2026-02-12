@@ -88,8 +88,8 @@ window.onload = () => {
     } else if (path.includes('login.html') || path.includes('signup.html')) {
         if (authToken) window.location.href = 'dashboard.html';
     } else {
-        // Root redirect
-        window.location.href = authToken ? 'dashboard.html' : 'login.html';
+        // Root redirect - check if we are at index.html in the root of the app
+        window.location.href = authToken ? 'pages/dashboard.html' : 'pages/login.html';
     }
 };
 
