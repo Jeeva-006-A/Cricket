@@ -193,7 +193,34 @@ function addExtra(type) {
 function addWicket() { document.getElementById('wicketModal').style.display = 'flex'; }
 function closeWicketModal() { document.getElementById('wicketModal').style.display = 'none'; }
 
-function handleWicketSelect(type) {
+function requestInput(title, placeholder) {
+    return new Promise((resolve) => {
+        document.getElementById('inputModalTitle').innerText = title;
+        const input = document.getElementById('genericInput');
+        const modal = document.getElementById('inputModal');
+        input.value = '';
+        input.placeholder = placeholder;
+        modal.style.display = 'flex';
+        input.focus();
+
+        const submit = document.getElementById('inputModalSubmit');
+        const handle = () => {
+            const val = input.value;
+            modal.style.display = 'none';
+            input.removeEventListener('keypress', keyHandle);
+            resolve(val);
+        };
+
+        const keyHandle = (e) => {
+            if (e.key === 'Enter') handle();
+        };
+
+        submit.onclick = handle;
+        input.addEventListener('keypress', keyHandle);
+    });
+}
+
+async function handleWicketSelect(type) {
     closeWicketModal();
     const inn = gameState.innings[gameState.currentInnings];
     let outIdx = inn.strikerIdx;
@@ -217,7 +244,8 @@ function handleWicketSelect(type) {
         bOut.balls++;
         let fielder = '';
         if (type === 'Caught' || type === 'Stumped') {
-            fielder = prompt(`Fielder Name? (or leave blank)`, 'Fielder');
+            const label = type === 'Caught' ? 'Fielder Name' : 'Wicket Keeper Name';
+            fielder = await requestInput(label, 'Enter name');
         }
 
         if (type === 'Bowled') bOut.outDesc = `b ${bowler.name}`;
@@ -230,7 +258,7 @@ function handleWicketSelect(type) {
         bowler.balls++;
         inn.balls++;
     } else {
-        let fielder = prompt(`Fielder Name (Run Out)?`, 'Fielder');
+        let fielder = await requestInput('Run Out By (Fielder)', 'Enter name');
         bOut.outDesc = `run out (${fielder || 'Fielder'})`;
         bowler.balls++;
         inn.balls++;
@@ -238,8 +266,8 @@ function handleWicketSelect(type) {
 
     thisOverBalls.push({ type: 'wicket', value: 'W', label: 'W' });
     if (inn.wickets < 10) {
-        let n = prompt('New Batter Name?', `Batter ${inn.batters.length + 1}`);
-        inn.batters.push({ name: n || 'Batter', runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false });
+        let n = await requestInput('New Batter Name', 'Enter name');
+        inn.batters.push({ name: n || `Batter ${inn.batters.length + 1}`, runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false });
         if (outIdx === inn.strikerIdx) inn.strikerIdx = inn.batters.length - 1;
         else inn.nonStrikerIdx = inn.batters.length - 1;
     }
