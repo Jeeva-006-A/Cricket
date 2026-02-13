@@ -1,5 +1,10 @@
 import os
+import sys
 import json
+
+# Add current directory to sys.path for Vercel
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -7,9 +12,23 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 import uvicorn
 
-from database import get_db, init_db
-from auth import create_access_token, get_current_user, verify_password, get_password_hash
-from schemas import UserAuth, MatchData
+try:
+    import database
+    from database import get_db, init_db
+except ImportError:
+    from .database import get_db, init_db
+
+try:
+    import auth
+    from auth import create_access_token, get_current_user, verify_password, get_password_hash
+except ImportError:
+    from .auth import create_access_token, get_current_user, verify_password, get_password_hash
+
+try:
+    import schemas
+    from schemas import UserAuth, MatchData
+except ImportError:
+    from .schemas import UserAuth, MatchData
 
 app = FastAPI(title="CricScore Pro API")
 
