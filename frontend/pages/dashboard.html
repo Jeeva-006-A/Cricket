@@ -152,6 +152,45 @@
                     <button class="btn btn-score btn-extras" onclick="addExtra('NB')">NB</button>
                     <button class="btn btn-score btn-wicket" onclick="addWicket()">WKT</button>
                 </div>
+
+                <!-- Advanced Controls -->
+                <div
+                    style="margin-top: 1.5rem; padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 12px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <div id="freeHitIndicator"
+                            style="display: none; color: var(--secondary-color); font-weight: 700; font-size: 0.9rem;">
+                            🎯 FREE HIT
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn"
+                                style="padding: 0.5rem 1rem; font-size: 0.8rem; background: rgba(0,255,136,0.1); color: var(--primary-color);"
+                                onclick="useDRS('A')">
+                                DRS Team A (<span id="drsTeamACount">2</span>)
+                            </button>
+                            <button class="btn"
+                                style="padding: 0.5rem 1rem; font-size: 0.8rem; background: rgba(255,215,0,0.1); color: var(--secondary-color);"
+                                onclick="useDRS('B')">
+                                DRS Team B (<span id="drsTeamBCount">2</span>)
+                            </button>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
+                        <button class="btn"
+                            style="padding: 0.5rem; font-size: 0.75rem; background: rgba(255,255,255,0.05);"
+                            onclick="setMatchStatus('break')">Break</button>
+                        <button class="btn"
+                            style="padding: 0.5rem; font-size: 0.75rem; background: rgba(255,255,255,0.05);"
+                            onclick="setMatchStatus('lunch')">Lunch</button>
+                        <button class="btn"
+                            style="padding: 0.5rem; font-size: 0.75rem; background: rgba(255,255,255,0.05);"
+                            onclick="setMatchStatus('stumps')">Stumps</button>
+                        <button class="btn"
+                            style="padding: 0.5rem; font-size: 0.75rem; background: rgba(255,255,255,0.05);"
+                            onclick="declareDraw()">Draw</button>
+                    </div>
+                </div>
+
                 <div class="over-summary">
                     <div class="over-title"><span>CURRENT OVER</span><span id="thisOverRuns">RUNS: 0</span></div>
                     <div class="ball-capsules" id="ballCapsules"></div>
@@ -228,6 +267,9 @@
                     <button class="btn btn-primary" onclick="location.reload()">New Match</button>
                     <button class="btn" style="margin-top: 1rem; background: rgba(255,255,255,0.05); color: white;"
                         onclick="showHistory()">Match History</button>
+                    <button id="superOverBtn" class="btn"
+                        style="margin-top: 1rem; background: rgba(255,68,68,0.2); color: #ff4444; display: none;"
+                        onclick="startSuperOver()">🔥 SUPER OVER</button>
                 </div>
             </section>
 
@@ -330,6 +372,7 @@
         </div>
     </div>
 
+    <script src="../js/frontend/advanced_features.js"></script>
     <script src="../js/frontend/script.js?v=2"></script>
 </body>
 

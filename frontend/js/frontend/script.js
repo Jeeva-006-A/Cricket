@@ -69,7 +69,12 @@ let gameState = {
         { teamName: '', runs: 0, wickets: 0, balls: 0, batters: [], bowlers: [], extras: { wd: 0, nb: 0, lb: 0, b: 0, total: 0 }, fow: [], strikerIdx: 0, nonStrikerIdx: 1, bowlerIdx: 0, partnershipRuns: 0, partnershipBalls: 0 },
         { teamName: '', runs: 0, wickets: 0, balls: 0, batters: [], bowlers: [], extras: { wd: 0, nb: 0, lb: 0, b: 0, total: 0 }, fow: [], strikerIdx: 0, nonStrikerIdx: 1, bowlerIdx: 0, partnershipRuns: 0, partnershipBalls: 0 }
     ],
-    target: null, viewingInnings: 1
+    target: null, viewingInnings: 1,
+    freeHit: false,
+    drsTeamA: 2,
+    drsTeamB: 2,
+    matchStatus: 'live', // 'live', 'break', 'lunch', 'stumps', 'draw'
+    isSuperOver: false
 };
 
 let thisOverBalls = [];
@@ -167,16 +172,20 @@ function startMatch() {
 function addRuns(run) {
     const inn = gameState.innings[gameState.currentInnings];
     inn.runs += run; inn.balls++;
-    inn.partnershipRuns += run; inn.partnershipBalls++;
-    const s = inn.batters[inn.strikerIdx];
-    s.runs += run; s.balls++;
-    if (run === 4) s.fours++; if (run === 6) s.sixes++;
-
-    const b = inn.bowlers[inn.bowlerIdx];
-    b.runs += run; b.balls++;
-
+    inn.batters[inn.strikerIdx].runs += run;
+    inn.batters[inn.strikerIdx].balls++;
+    inn.bowlers[inn.bowlerIdx].runs += run;
+    inn.bowlers[inn.bowlerIdx].balls++;
+    inn.partnershipRuns += run;
+    inn.partnershipBalls++;
+    if (run === 4) inn.batters[inn.strikerIdx].fours++;
+    if (run === 6) inn.batters[inn.strikerIdx].sixes++;
     thisOverBalls.push({ type: 'run', value: run, label: run === 0 ? '.' : run.toString() });
     if (run % 2 !== 0) rotateStrike();
+
+    // Clear Free Hit after the ball
+    if (gameState.freeHit) gameState.freeHit = false;
+
     checkOverEnd(); updateDisplay(); checkInningsEnd();
 }
 
@@ -184,7 +193,12 @@ function addExtra(type) {
     const inn = gameState.innings[gameState.currentInnings];
     inn.runs++; inn.extras.total++;
     inn.partnershipRuns++;
-    if (type === 'WD') inn.extras.wd++; else inn.extras.nb++;
+    if (type === 'WD') inn.extras.wd++;
+    else {
+        inn.extras.nb++;
+        gameState.freeHit = true; // Next ball is Free Hit
+        alert('🎯 FREE HIT! Next ball is a Free Hit.');
+    }
     inn.bowlers[inn.bowlerIdx].runs++;
     thisOverBalls.push({ type: 'extra', value: type, label: type });
     updateDisplay(); checkInningsEnd();
@@ -221,6 +235,13 @@ function requestInput(title, placeholder) {
 }
 
 async function handleWicketSelect(type) {
+    // Free Hit: Only Run Out allowed
+    if (gameState.freeHit && type !== 'Run Out') {
+        alert('⚠️ FREE HIT! Batter cannot be dismissed except by Run Out.');
+        closeWicketModal();
+        return;
+    }
+
     closeWicketModal();
     const inn = gameState.innings[gameState.currentInnings];
     let outIdx = inn.strikerIdx;
@@ -264,6 +285,9 @@ async function handleWicketSelect(type) {
         inn.balls++;
     }
 
+    // Clear Free Hit after wicket
+    if (gameState.freeHit) gameState.freeHit = false;
+
     thisOverBalls.push({ type: 'wicket', value: 'W', label: 'W' });
     if (inn.wickets < 10) {
         let n = await requestInput('New Batter Name', 'Enter name');
@@ -305,6 +329,18 @@ function updateDisplay() {
     document.getElementById('ballsInOver').innerText = inn.balls % 6;
     document.getElementById('maxOvers').innerText = gameState.maxOvers;
     document.getElementById('displayTeams').innerText = `${gameState.teamA} vs ${gameState.teamB}`;
+
+    // Free Hit Indicator
+    const freeHitEl = document.getElementById('freeHitIndicator');
+    if (freeHitEl) {
+        freeHitEl.style.display = gameState.freeHit ? 'block' : 'none';
+    }
+
+    // DRS Counts
+    const drsAEl = document.getElementById('drsTeamACount');
+    const drsBEl = document.getElementById('drsTeamBCount');
+    if (drsAEl) drsAEl.innerText = gameState.drsTeamA;
+    if (drsBEl) drsBEl.innerText = gameState.drsTeamB;
 
     // Run Rate Calculations
     const crr = inn.balls > 0 ? (inn.runs / (inn.balls / 6)).toFixed(2) : '0.00';
@@ -377,21 +413,27 @@ function checkInningsEnd() {
     if (inn.balls >= gameState.maxOvers * 6 || inn.wickets >= 10) {
         if (gameState.currentInnings === 1) {
             gameState.target = inn.runs + 1;
-            document.getElementById('nextInningsBtn').style.display = 'block';
-            alert(`Innings Over! Target: ${gameState.target}`);
+            const reason = inn.wickets >= 10 ? 'All Out!' : 'Overs Completed!';
+            alert(`${reason} Target: ${gameState.target}\n\nStarting 2nd Innings...`);
+            setTimeout(() => startSecondInnings(), 2000);
         } else endMatchManually();
     }
 }
 
-function startSecondInnings() {
+async function startSecondInnings() {
     gameState.currentInnings = 2;
     const inn = gameState.innings[2];
     inn.teamName = gameState.teamB;
+
+    const opener1 = await requestInput('Opener 1 Name', 'Enter name');
+    const opener2 = await requestInput('Opener 2 Name', 'Enter name');
+    const bowler = await requestInput('Opening Bowler Name', 'Enter name');
+
     inn.batters = [
-        { name: prompt('Opener 1', 'Batter 1') || 'Batter 1', runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false },
-        { name: prompt('Opener 2', 'Batter 2') || 'Batter 2', runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false }
+        { name: opener1 || 'Batter 1', runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false },
+        { name: opener2 || 'Batter 2', runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false }
     ];
-    inn.bowlers = [{ name: prompt('Opening Bowler', 'Bowler') || 'Bowler', balls: 0, maidens: 0, runs: 0, wickets: 0 }];
+    inn.bowlers = [{ name: bowler || 'Bowler', balls: 0, maidens: 0, runs: 0, wickets: 0 }];
     document.getElementById('nextInningsBtn').style.display = 'none';
     thisOverBalls = [];
     updateDisplay();
@@ -403,6 +445,12 @@ async function calculateResult() {
     const s1 = gameState.innings[1]; const s2 = gameState.innings[2];
     let res = (s2.runs >= gameState.target) ? `${gameState.teamB} wins` : (s1.runs > s2.runs) ? `${gameState.teamA} wins` : "Match Tie";
     document.getElementById('matchOutcome').innerText = res.toUpperCase();
+
+    // Show Super Over button if match is tied
+    const superOverBtn = document.getElementById('superOverBtn');
+    if (superOverBtn && res === "Match Tie") {
+        superOverBtn.style.display = 'block';
+    }
 
     try {
         await apiCall('/matches', {
