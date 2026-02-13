@@ -197,7 +197,11 @@ function handleWicketSelect(type) {
     closeWicketModal();
     const inn = gameState.innings[gameState.currentInnings];
     let outIdx = inn.strikerIdx;
-    if (type === 'Run Out') outIdx = confirm(`Striker (${inn.batters[inn.strikerIdx].name}) Out?`) ? inn.strikerIdx : inn.nonStrikerIdx;
+
+    // Determine who is out for Run Out
+    if (type === 'Run Out') {
+        outIdx = confirm(`Striker (${inn.batters[inn.strikerIdx].name}) Out?`) ? inn.strikerIdx : inn.nonStrikerIdx;
+    }
 
     inn.wickets++;
     const bOut = inn.batters[outIdx];
@@ -207,18 +211,28 @@ function handleWicketSelect(type) {
     inn.partnershipRuns = 0;
     inn.partnershipBalls = 0;
 
+    const bowler = inn.bowlers[inn.bowlerIdx];
+
     if (type !== 'Run Out') {
         bOut.balls++;
-        let f = (type === 'Caught' || type === 'Stumped') ? prompt(`Fielder Name?`, 'Fielder') : '';
-        if (type === 'Bowled') bOut.outDesc = `b ${inn.bowlers[inn.bowlerIdx].name}`;
-        else if (type === 'Caught') bOut.outDesc = `c ${f} b ${inn.bowlers[inn.bowlerIdx].name}`;
-        else bOut.outDesc = `${type} b ${inn.bowlers[inn.bowlerIdx].name}`;
-        inn.bowlers[inn.bowlerIdx].wickets++;
-        inn.bowlers[inn.bowlerIdx].balls++;
+        let fielder = '';
+        if (type === 'Caught' || type === 'Stumped') {
+            fielder = prompt(`Fielder Name? (or leave blank)`, 'Fielder');
+        }
+
+        if (type === 'Bowled') bOut.outDesc = `b ${bowler.name}`;
+        else if (type === 'Caught') bOut.outDesc = `c ${fielder || 'Fielder'} b ${bowler.name}`;
+        else if (type === 'Stumped') bOut.outDesc = `st ${fielder || 'Keeper'} b ${bowler.name}`;
+        else if (type === 'LBW') bOut.outDesc = `lbw b ${bowler.name}`;
+        else bOut.outDesc = `${type} b ${bowler.name}`;
+
+        bowler.wickets++;
+        bowler.balls++;
         inn.balls++;
     } else {
-        bOut.outDesc = 'run out';
-        inn.bowlers[inn.bowlerIdx].balls++;
+        let fielder = prompt(`Fielder Name (Run Out)?`, 'Fielder');
+        bOut.outDesc = `run out (${fielder || 'Fielder'})`;
+        bowler.balls++;
         inn.balls++;
     }
 
@@ -299,7 +313,20 @@ function updateDisplay() {
     if (vI && Array.isArray(vI.batters)) {
         vI.batters.forEach((bat, i) => {
             const sr = bat.balls > 0 ? (bat.runs / bat.balls * 100).toFixed(2) : '0.00';
-            bHtml += `<tr><td>${bat.name}${i === vI.strikerIdx && gameState.currentInnings === gameState.viewingInnings ? '*' : ''}</td><td>${bat.runs}</td><td>${bat.balls}</td><td>${bat.fours}</td><td>${bat.sixes}</td><td>${sr}</td></tr>`;
+            const nameDisplay = `${bat.name}${i === vI.strikerIdx && gameState.currentInnings === gameState.viewingInnings ? '*' : ''}`;
+            const outDescDisplay = bat.isOut ? `<div style="font-size: 0.7rem; color: var(--text-secondary);">${bat.outDesc}</div>` : (bat.outDesc === 'not out' ? '<div style="font-size: 0.7rem; color: var(--primary-color);">not out</div>' : '');
+
+            bHtml += `<tr>
+                <td>
+                    <div style="font-weight: 600;">${nameDisplay}</div>
+                    ${outDescDisplay}
+                </td>
+                <td>${bat.runs}</td>
+                <td>${bat.balls}</td>
+                <td>${bat.fours}</td>
+                <td>${bat.sixes}</td>
+                <td>${sr}</td>
+            </tr>`;
         });
     }
     document.getElementById('battingBody').innerHTML = bHtml;
@@ -447,7 +474,19 @@ function switchDetailScorecard(innIdx) {
     if (Array.isArray(inn.batters)) {
         inn.batters.forEach(bat => {
             const sr = bat.balls > 0 ? (bat.runs / bat.balls * 100).toFixed(2) : '0.00';
-            bHtml += `<tr><td>${bat.name}</td><td>${bat.runs}</td><td>${bat.balls}</td><td>${bat.fours}</td><td>${bat.sixes}</td><td>${sr}</td></tr>`;
+            const outDescDisplay = bat.isOut ? `<div style="font-size: 0.7rem; color: var(--text-secondary);">${bat.outDesc}</div>` : (bat.outDesc === 'not out' ? '<div style="font-size: 0.7rem; color: var(--primary-color);">not out</div>' : '');
+
+            bHtml += `<tr>
+                <td>
+                    <div style="font-weight: 600;">${bat.name}</div>
+                    ${outDescDisplay}
+                </td>
+                <td>${bat.runs}</td>
+                <td>${bat.balls}</td>
+                <td>${bat.fours}</td>
+                <td>${bat.sixes}</td>
+                <td>${sr}</td>
+            </tr>`;
         });
     }
     document.getElementById('detailBattingBody').innerHTML = bHtml || '<tr><td colspan="6">No batting data</td></tr>';
