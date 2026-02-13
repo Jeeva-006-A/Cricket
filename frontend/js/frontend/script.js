@@ -1,8 +1,9 @@
 // CricScore Pro Logic - Multi-Page Version
 
-// CHANGE THIS to your Render URL after deploying the backend (e.g., https://cricket-backend.onrender.com/api)
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? '/api'
+// Automatically detect if we are local or deployed
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const API_BASE = isLocal
+    ? (window.location.port === '8080' ? '/api' : 'http://127.0.0.1:8080/api')
     : `${window.location.origin}/api`;
 
 let currentUser = localStorage.getItem('username');
@@ -21,11 +22,18 @@ async function apiCall(endpoint, options = {}) {
 
     const contentType = response.headers.get("content-type");
     if (contentType && contentType.indexOf("application/json") !== -1) {
-        return await response.json();
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.detail || data.message || "An unknown error occurred");
+        }
+        return data;
     } else {
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status} ${response.statusText}`);
+        }
         const text = await response.text();
         console.error("Non-JSON response received:", text);
-        throw new Error("Backend Server not responding correctly. Are you sure the backend is running?");
+        throw new Error("Backend Server returned unexpected format. Check backend logs.");
     }
 }
 
@@ -323,7 +331,16 @@ let matchHistoryData = [];
 async function showHistory() {
     try {
         matchHistoryData = await apiCall('/matches');
+
+        if (!Array.isArray(matchHistoryData)) {
+            console.error("Expected array for matches, got:", typeof matchHistoryData);
+            matchHistoryData = [];
+        }
+
         let hHtml = '';
+        if (matchHistoryData.length === 0) {
+            hHtml = '<div class="history-item">No matches played yet.</div>';
+        }
 
         let playerRuns = {};
         let playerWkts = {};

@@ -112,6 +112,7 @@ async def get_matches(user_id: int = Depends(get_current_user)):
         conn.close()
 
 # Static Files serving for local development
+# Mount this LAST so it doesn't stay in the way of /api routes
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "frontend"))
 if os.path.exists(FRONTEND_DIR):
