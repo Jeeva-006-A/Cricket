@@ -12,22 +12,21 @@ let authToken = localStorage.getItem('authToken');
 function showLoader() {
     const loader = document.getElementById('globalLoader');
     if (loader) {
-        loader.style.display = 'flex';
-        loader.classList.add('active');
+        loader.classList.remove('hidden');
     }
 }
 
 function hideLoader() {
     const loader = document.getElementById('globalLoader');
     if (loader) {
-        loader.style.display = 'none';
-        loader.classList.remove('active');
+        loader.classList.add('hidden');
     }
 }
 
 // Hide loader on initial page load once content is ready
 document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(hideLoader, 500); // Small delay for smooth feel
+    // Initial hide with a slight delay for that premium feel
+    setTimeout(hideLoader, 800);
 });
 
 // Helper to handle API responses safely
