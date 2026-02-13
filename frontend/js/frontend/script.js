@@ -9,31 +9,57 @@ const API_BASE = isLocal
 let currentUser = localStorage.getItem('username');
 let authToken = localStorage.getItem('authToken');
 
+function showLoader() {
+    const loader = document.getElementById('globalLoader');
+    if (loader) {
+        loader.style.display = 'flex';
+        loader.classList.add('active');
+    }
+}
+
+function hideLoader() {
+    const loader = document.getElementById('globalLoader');
+    if (loader) {
+        loader.style.display = 'none';
+        loader.classList.remove('active');
+    }
+}
+
+// Hide loader on initial page load once content is ready
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(hideLoader, 500); // Small delay for smooth feel
+});
+
 // Helper to handle API responses safely
 async function apiCall(endpoint, options = {}) {
-    const response = await fetch(API_BASE + endpoint, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': authToken,
-            ...options.headers
-        }
-    });
+    showLoader();
+    try {
+        const response = await fetch(API_BASE + endpoint, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': authToken,
+                ...options.headers
+            }
+        });
 
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.indexOf("application/json") !== -1) {
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.detail || data.message || "An unknown error occurred");
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || data.message || "An unknown error occurred");
+            }
+            return data;
+        } else {
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status} ${response.statusText}`);
+            }
+            const text = await response.text();
+            console.error("Non-JSON response received:", text);
+            throw new Error("Backend Server returned unexpected format. Check backend logs.");
         }
-        return data;
-    } else {
-        if (!response.ok) {
-            throw new Error(`Server error: ${response.status} ${response.statusText}`);
-        }
-        const text = await response.text();
-        console.error("Non-JSON response received:", text);
-        throw new Error("Backend Server returned unexpected format. Check backend logs.");
+    } finally {
+        hideLoader();
     }
 }
 
@@ -438,6 +464,10 @@ function switchDetailScorecard(innIdx) {
 }
 
 function switchScreen(id) {
-    document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
+    showLoader();
+    setTimeout(() => {
+        document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        hideLoader();
+    }, 300);
 }
