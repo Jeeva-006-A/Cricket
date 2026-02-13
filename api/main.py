@@ -5,11 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-try:
-    from psycopg2 import extras
-except ImportError:
-    # Fallback for environments where binary might be tricky
-    extras = None
 import uvicorn
 
 from database import get_db, init_db
@@ -73,11 +68,18 @@ async def signup(user: UserAuth):
 @app.post("/api/login")
 async def login(user: UserAuth):
     conn = get_db()
-    cursor = conn.cursor(cursor_factory=extras.RealDictCursor)
+    cursor = conn.cursor()
     try:
-        cursor.execute("SELECT * FROM users WHERE username = %s", (user.username,))
-        db_user = cursor.fetchone()
-        if not db_user or not verify_password(user.password, db_user["password"]):
+        cursor.execute("SELECT id, username, password FROM users WHERE username = %s", (user.username,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=401, detail="Invalid username or password")
+        
+        # Manually map columns if we are not using RealDictCursor
+        # row structure based on query: [id, username, password]
+        db_user = {"id": row[0], "username": row[1], "password": row[2]}
+        
+        if not verify_password(user.password, db_user["password"]):
             raise HTTPException(status_code=401, detail="Invalid username or password")
         
         token = create_access_token({"id": db_user["id"], "username": db_user["username"]})
@@ -103,21 +105,24 @@ async def save_match(match: MatchData, user_id: int = Depends(get_current_user))
 @app.get("/api/matches")
 async def get_matches(user_id: int = Depends(get_current_user)):
     conn = get_db()
-    cursor = conn.cursor(cursor_factory=extras.RealDictCursor)
+    cursor = conn.cursor()
     try:
-        cursor.execute("SELECT * FROM matches WHERE user_id = %s ORDER BY created_at DESC", (user_id,))
+        # Explicitly list columns to make manual mapping easier
+        cursor.execute("SELECT id, team_a, team_b, score_data, result, created_at FROM matches WHERE user_id = %s ORDER BY created_at DESC", (user_id,))
         rows = cursor.fetchall()
         
         matches = []
         for row in rows:
-            matches.append({
-                "id": row["id"],
-                "team_a": row["team_a"],
-                "team_b": row["team_b"],
-                "score_data": json.loads(row["score_data"]) if isinstance(row["score_data"], str) else row["score_data"],
-                "result": row["result"],
-                "created_at": row["created_at"].isoformat() if hasattr(row["created_at"], "isoformat") else row["created_at"]
-            })
+            # Map columns manually: [id, team_a, team_b, score_data, result, created_at]
+            match_item = {
+                "id": row[0],
+                "team_a": row[1],
+                "team_b": row[2],
+                "score_data": json.loads(row[3]) if isinstance(row[3], str) else row[3],
+                "result": row[4],
+                "created_at": row[5].isoformat() if hasattr(row[5], "isoformat") else row[5]
+            }
+            matches.append(match_item)
         return matches
     finally:
         conn.close()

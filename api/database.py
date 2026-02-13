@@ -1,10 +1,8 @@
 import os
 try:
     import psycopg2
-    from psycopg2 import extras
 except ImportError:
     psycopg2 = None
-    extras = None
 from dotenv import load_dotenv
 
 load_dotenv()

@@ -54,7 +54,7 @@ async function handleLogin() {
     const u = document.getElementById('loginUsername').value;
     const p = document.getElementById('loginPassword').value;
     if (!u || !p) return alert('Username and Password required');
-    if (p.length > 7) return alert('Password cannot be longer than 7 characters');
+    if (p.length !== 7) return alert('Password must be exactly 7 characters long');
 
     try {
         const data = await apiCall('/login', {
