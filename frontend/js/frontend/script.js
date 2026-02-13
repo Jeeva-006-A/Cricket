@@ -1,7 +1,7 @@
 // CricScore Pro Logic - Multi-Page Version
 
 // Automatically detect if we are local or deployed
-const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
 const API_BASE = isLocal
     ? (window.location.port === '8080' ? '/api' : 'http://127.0.0.1:8080/api')
     : `${window.location.origin}/api`;
@@ -269,19 +269,23 @@ function updateDisplay() {
     // Scorecard Update
     const vI = gameState.innings[gameState.viewingInnings];
     let bHtml = '';
-    vI.batters.forEach((bat, i) => {
-        const sr = bat.balls > 0 ? (bat.runs / bat.balls * 100).toFixed(2) : '0.00';
-        bHtml += `<tr><td>${bat.name}${i === vI.strikerIdx && gameState.currentInnings === gameState.viewingInnings ? '*' : ''}</td><td>${bat.runs}</td><td>${bat.balls}</td><td>${bat.fours}</td><td>${bat.sixes}</td><td>${sr}</td></tr>`;
-    });
+    if (vI && Array.isArray(vI.batters)) {
+        vI.batters.forEach((bat, i) => {
+            const sr = bat.balls > 0 ? (bat.runs / bat.balls * 100).toFixed(2) : '0.00';
+            bHtml += `<tr><td>${bat.name}${i === vI.strikerIdx && gameState.currentInnings === gameState.viewingInnings ? '*' : ''}</td><td>${bat.runs}</td><td>${bat.balls}</td><td>${bat.fours}</td><td>${bat.sixes}</td><td>${sr}</td></tr>`;
+        });
+    }
     document.getElementById('battingBody').innerHTML = bHtml;
-    document.getElementById('extrasValue').innerText = vI.extras.total;
-    document.getElementById('totalScoreValue').innerText = `${vI.runs}/${vI.wickets} (${Math.floor(vI.balls / 6)}.${vI.balls % 6} ov)`;
+    document.getElementById('extrasValue').innerText = vI ? vI.extras.total : 0;
+    document.getElementById('totalScoreValue').innerText = vI ? `${vI.runs}/${vI.wickets} (${Math.floor(vI.balls / 6)}.${vI.balls % 6} ov)` : '0/0';
 
     let bowlHtml = '';
-    vI.bowlers.forEach(bowl => {
-        const eco = bowl.balls > 0 ? (bowl.runs / (bowl.balls / 6)).toFixed(2) : '0.00';
-        bowlHtml += `<tr><td>${bowl.name}</td><td>${Math.floor(bowl.balls / 6)}.${bowl.balls % 6}</td><td>${bowl.maidens}</td><td>${bowl.runs}</td><td>${bowl.wickets}</td><td>${eco}</td></tr>`;
-    });
+    if (vI && Array.isArray(vI.bowlers)) {
+        vI.bowlers.forEach(bowl => {
+            const eco = bowl.balls > 0 ? (bowl.runs / (bowl.balls / 6)).toFixed(2) : '0.00';
+            bowlHtml += `<tr><td>${bowl.name}</td><td>${Math.floor(bowl.balls / 6)}.${bowl.balls % 6}</td><td>${bowl.maidens}</td><td>${bowl.runs}</td><td>${bowl.wickets}</td><td>${eco}</td></tr>`;
+        });
+    }
     document.getElementById('bowlingBody').innerHTML = bowlHtml;
 }
 
@@ -329,38 +333,49 @@ async function calculateResult() {
 let matchHistoryData = [];
 
 async function showHistory() {
+    console.log("showHistory called at", new Date().toISOString());
     try {
-        matchHistoryData = await apiCall('/matches');
+        const response = await apiCall('/matches');
+        console.log("API response received:", response);
 
-        if (!Array.isArray(matchHistoryData)) {
-            console.error("Expected array for matches, got:", typeof matchHistoryData);
-            matchHistoryData = [];
+        // Use a local variable for iteration to be ultra-safe
+        const matches = Array.isArray(response) ? response : [];
+        matchHistoryData = matches; // Still update global for detail view
+
+        if (!Array.isArray(response)) {
+            console.error("Expected array for matches, received:", typeof response, response);
         }
 
         let hHtml = '';
-        if (matchHistoryData.length === 0) {
+        if (matches.length === 0) {
             hHtml = '<div class="history-item">No matches played yet.</div>';
         }
 
         let playerRuns = {};
         let playerWkts = {};
 
-        matchHistoryData.forEach((m, idx) => {
+        matches.forEach((m, idx) => {
             hHtml += `<div class="history-item" onclick="showMatchDetail(${idx})"><b>${m.team_a} vs ${m.team_b}</b><br>${m.result}</div>`;
 
             // Extract stats from match data
             const data = m.score_data;
-            [1, 2].forEach(innIdx => {
-                const inn = data[innIdx];
-                if (inn) {
-                    inn.batters.forEach(b => {
-                        playerRuns[b.name] = (playerRuns[b.name] || 0) + b.runs;
-                    });
-                    inn.bowlers.forEach(bw => {
-                        playerWkts[bw.name] = (playerWkts[bw.name] || 0) + bw.wickets;
-                    });
-                }
-            });
+            if (data && typeof data === 'object') {
+                [1, 2].forEach(innIdx => {
+                    const inn = data[innIdx];
+                    if (inn) {
+                        if (Array.isArray(inn.batters)) {
+                            inn.batters.forEach(b => {
+                                playerRuns[b.name] = (playerRuns[b.name] || 0) + b.runs;
+                            });
+                        }
+                        if (Array.isArray(inn.bowlers)) {
+                            inn.bowlers.forEach(bw => {
+                                playerWkts[bw.name] = (playerWkts[bw.name] || 0) + bw.wickets;
+                            });
+                        }
+                    }
+                });
+            }
         });
 
         // Top Performers Logic
@@ -402,18 +417,22 @@ function switchDetailScorecard(innIdx) {
     }
 
     let bHtml = '';
-    inn.batters.forEach(bat => {
-        const sr = bat.balls > 0 ? (bat.runs / bat.balls * 100).toFixed(2) : '0.00';
-        bHtml += `<tr><td>${bat.name}</td><td>${bat.runs}</td><td>${bat.balls}</td><td>${bat.fours}</td><td>${bat.sixes}</td><td>${sr}</td></tr>`;
-    });
-    document.getElementById('detailBattingBody').innerHTML = bHtml;
+    if (Array.isArray(inn.batters)) {
+        inn.batters.forEach(bat => {
+            const sr = bat.balls > 0 ? (bat.runs / bat.balls * 100).toFixed(2) : '0.00';
+            bHtml += `<tr><td>${bat.name}</td><td>${bat.runs}</td><td>${bat.balls}</td><td>${bat.fours}</td><td>${bat.sixes}</td><td>${sr}</td></tr>`;
+        });
+    }
+    document.getElementById('detailBattingBody').innerHTML = bHtml || '<tr><td colspan="6">No batting data</td></tr>';
 
     let bowlHtml = '';
-    inn.bowlers.forEach(bowl => {
-        const eco = bowl.balls > 0 ? (bowl.runs / (bowl.balls / 6)).toFixed(2) : '0.00';
-        bowlHtml += `<tr><td>${bowl.name}</td><td>${Math.floor(bowl.balls / 6)}.${bowl.balls % 6}</td><td>${bowl.maidens}</td><td>${bowl.runs}</td><td>${bowl.wickets}</td><td>${eco}</td></tr>`;
-    });
-    document.getElementById('detailBowlingBody').innerHTML = bowlHtml;
+    if (Array.isArray(inn.bowlers)) {
+        inn.bowlers.forEach(bowl => {
+            const eco = bowl.balls > 0 ? (bowl.runs / (bowl.balls / 6)).toFixed(2) : '0.00';
+            bowlHtml += `<tr><td>${bowl.name}</td><td>${Math.floor(bowl.balls / 6)}.${bowl.balls % 6}</td><td>${bowl.maidens}</td><td>${bowl.runs}</td><td>${bowl.wickets}</td><td>${eco}</td></tr>`;
+        });
+    }
+    document.getElementById('detailBowlingBody').innerHTML = bowlHtml || '<tr><td colspan="6">No bowling data</td></tr>';
 }
 
 function switchScreen(id) {

@@ -5,7 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from psycopg2 import extras
+try:
+    from psycopg2 import extras
+except ImportError:
+    # Fallback for environments where binary might be tricky
+    extras = None
 import uvicorn
 
 from database import get_db, init_db
@@ -36,6 +40,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(
         status_code=422,
         content={"detail": exc.errors(), "body": str(exc.body)},
+    )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc), "type": str(type(exc).__name__)},
     )
 
 # API Routes

@@ -1,6 +1,10 @@
 import os
-import psycopg2
-from psycopg2 import extras
+try:
+    import psycopg2
+    from psycopg2 import extras
+except ImportError:
+    psycopg2 = None
+    extras = None
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -8,6 +12,12 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_db():
+    if not psycopg2:
+        raise Exception("Database driver (psycopg2) failed to load. This usually means a dependency issue on the server. Try using 'psycopg2-binary' in requirements.txt.")
+        
+    if not DATABASE_URL:
+        raise Exception("DATABASE_URL environment variable is missing. Please add it to your Vercel/Environment settings.")
+        
     # Supabase/PostgreSQL requires SSL mode usually
     if "sslmode" not in DATABASE_URL:
         # Append sslmode if not present in the URL

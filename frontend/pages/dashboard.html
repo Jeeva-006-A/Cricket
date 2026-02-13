@@ -20,9 +20,35 @@
                 onclick="logout()">Logout</button>
         </header>
 
-        <main class="glass-card">
+        <main class="glass-card" style="padding: 0; overflow: hidden;">
+            <!-- Home Screen -->
+            <section id="homeScreen" class="setup-screen active" style="padding: 2rem;">
+                <h2 style="margin-bottom: 2rem; text-align: center;">What would you like to do?</h2>
+                <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
+                    <div class="glass-card"
+                        style="cursor: pointer; padding: 1.5rem; border: 1px solid var(--primary-color); background: rgba(0, 255, 136, 0.05);"
+                        onclick="switchScreen('setupScreen')">
+                        <h3 style="color: var(--primary-color); margin-bottom: 0.5rem;">🏏 Start New Match</h3>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary);">Setup a new cricket match with
+                            custom teams and overs.</p>
+                    </div>
+                    <div class="glass-card"
+                        style="cursor: pointer; padding: 1.5rem; border: 1px solid var(--secondary-color); background: rgba(255, 215, 0, 0.05);"
+                        onclick="showHistory()">
+                        <h3 style="color: var(--secondary-color); margin-bottom: 0.5rem;">📊 Match History</h3>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary);">Review scores and analytics of your
+                            previous matches.</p>
+                    </div>
+                </div>
+            </section>
+
             <!-- Setup Screen -->
-            <section id="setupScreen" class="setup-screen active">
+            <section id="setupScreen" class="setup-screen" style="padding: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2 style="font-size: 1.2rem;">Setup Match</h2>
+                    <button class="btn" style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.8rem;"
+                        onclick="switchScreen('homeScreen')">Back</button>
+                </div>
                 <div class="form-group">
                     <label>Team A Name</label>
                     <input type="text" id="teamA" placeholder="e.g. Smashers CC">
@@ -65,15 +91,10 @@
                     </div>
                 </div>
                 <button class="btn btn-primary" onclick="startMatch()">Start Match</button>
-                <div style="text-align: center; margin-top: 1.5rem;">
-                    <a href="#" onclick="showHistory()"
-                        style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem;">View Previous
-                        Matches</a>
-                </div>
             </section>
 
             <!-- Match Screen -->
-            <section id="matchScreen" class="match-screen">
+            <section id="matchScreen" class="match-screen" style="padding: 2rem;">
                 <div class="scoreboard">
                     <div class="team-names" id="displayTeams">Team A vs Team B</div>
                     <div id="tossInfo" style="font-size: 0.8rem; color: var(--secondary-color); margin-bottom: 0.5rem;">
@@ -188,7 +209,7 @@
             </section>
 
             <!-- Result Screen -->
-            <section id="resultScreen" class="match-screen">
+            <section id="resultScreen" class="match-screen" style="padding: 2rem;">
                 <h2 style="text-align:center; margin-bottom: 2rem; color: var(--secondary-color);" id="matchOutcome">
                     MATCH ENDED</h2>
                 <div class="innings-summary">
@@ -207,7 +228,7 @@
             </section>
 
             <!-- History Screen -->
-            <section id="historyScreen" class="history-screen">
+            <section id="historyScreen" class="history-screen" style="padding: 2rem;">
                 <div id="statsSection" class="stats-overview" style="margin-bottom: 2rem; display: none;">
                     <h3 style="margin-bottom: 1rem; color: var(--secondary-color);">Top Performers</h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -228,7 +249,7 @@
             </section>
 
             <!-- Detail Screen -->
-            <section id="matchDetailScreen" class="history-screen">
+            <section id="matchDetailScreen" class="history-screen" style="padding: 2rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                     <h2 id="detailMatchTitle" style="font-size: 1.2rem;">Match Detail</h2>
                     <button class="btn" style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.8rem;"
@@ -292,7 +313,7 @@
         </div>
     </div>
 
-    <script src="../js/frontend/script.js"></script>
+    <script src="../js/frontend/script.js?v=2"></script>
 </body>
 
 </html>

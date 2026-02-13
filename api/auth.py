@@ -2,6 +2,14 @@ import os
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
+
+# Fix for passlib/bcrypt compatibility issue
+import bcrypt
+if not hasattr(bcrypt, "__about__"):
+    class Dummy: pass
+    bcrypt.__about__ = Dummy()
+    bcrypt.__about__.__version__ = bcrypt.__version__
+
 from passlib.context import CryptContext
 from fastapi import HTTPException, Header, Depends
 from dotenv import load_dotenv
@@ -15,10 +23,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1 week
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+    # Bcrypt has a 72-byte limit
+    return pwd_context.verify(plain_password[:72], hashed_password)
 
 def get_password_hash(password):
-    return pwd_context.hash(password)
+    # Bcrypt has a 72-byte limit
+    return pwd_context.hash(password[:72])
 
 def create_access_token(data: dict):
     to_encode = data.copy()

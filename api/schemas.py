@@ -4,8 +4,10 @@ class UserAuth(BaseModel):
     username: str
     password: str
 
+from typing import Any
+
 class MatchData(BaseModel):
     teamA: str
     teamB: str
-    scoreData: dict
+    scoreData: Any
     result: str
