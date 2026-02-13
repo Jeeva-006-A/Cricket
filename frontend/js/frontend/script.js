@@ -29,6 +29,63 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(hideLoader, 800);
 });
 
+// Custom Alert/Confirm Functions
+function showAlert(message, title = 'Notification') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('notificationModal');
+        const titleEl = document.getElementById('notificationTitle');
+        const messageEl = document.getElementById('notificationMessage');
+        const okBtn = document.getElementById('notificationOk');
+        const cancelBtn = document.getElementById('notificationCancel');
+
+        titleEl.innerText = title;
+        messageEl.innerText = message;
+        cancelBtn.style.display = 'none';
+        modal.style.display = 'flex';
+
+        const handleOk = () => {
+            modal.style.display = 'none';
+            okBtn.removeEventListener('click', handleOk);
+            resolve(true);
+        };
+
+        okBtn.onclick = handleOk;
+    });
+}
+
+function showConfirm(message, title = 'Confirm') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('notificationModal');
+        const titleEl = document.getElementById('notificationTitle');
+        const messageEl = document.getElementById('notificationMessage');
+        const okBtn = document.getElementById('notificationOk');
+        const cancelBtn = document.getElementById('notificationCancel');
+
+        titleEl.innerText = title;
+        messageEl.innerText = message;
+        okBtn.innerText = 'Yes';
+        cancelBtn.innerText = 'No';
+        cancelBtn.style.display = 'block';
+        modal.style.display = 'flex';
+
+        const handleOk = () => {
+            modal.style.display = 'none';
+            okBtn.innerText = 'OK';
+            resolve(true);
+        };
+
+        const handleCancel = () => {
+            modal.style.display = 'none';
+            okBtn.innerText = 'OK';
+            resolve(false);
+        };
+
+        okBtn.onclick = handleOk;
+        cancelBtn.onclick = handleCancel;
+    });
+}
+
+
 // Helper to handle API responses safely
 async function apiCall(endpoint, options = {}) {
     showLoader();
@@ -83,8 +140,8 @@ let thisOverBalls = [];
 async function handleLogin() {
     const u = document.getElementById('loginUsername').value;
     const p = document.getElementById('loginPassword').value;
-    if (!u || !p) return alert('Username and Password required');
-    if (p.length !== 7) return alert('Password must be exactly 7 characters long');
+    if (!u || !p) return showAlert('Username and Password required', 'Login Error');
+    if (p.length !== 7) return showAlert('Password must be exactly 7 characters long', 'Password Error');
 
     try {
         const data = await apiCall('/login', {
@@ -95,23 +152,23 @@ async function handleLogin() {
         localStorage.setItem('authToken', data.token);
         localStorage.setItem('username', data.username);
         window.location.href = 'dashboard.html';
-    } catch (err) { alert(err.message); }
+    } catch (err) { showAlert(err.message, 'Login Error'); }
 }
 
 async function handleSignup() {
     const u = document.getElementById('signupUsername').value;
     const p = document.getElementById('signupPassword').value;
-    if (!u || !p) return alert('Username and Password required');
-    if (p.length !== 7) return alert('Password must be exactly 7 characters long');
+    if (!u || !p) return showAlert('Username and Password required', 'Signup Error');
+    if (p.length !== 7) return showAlert('Password must be exactly 7 characters long', 'Password Error');
 
     try {
         await apiCall('/signup', {
             method: 'POST',
             body: JSON.stringify({ username: u, password: p })
         });
-        alert('Signup Success! Please Login.');
+        await showAlert('Signup Success! Please Login.', 'Success');
         window.location.href = 'login.html';
-    } catch (err) { alert(err.message); }
+    } catch (err) { showAlert(err.message, 'Signup Error'); }
 }
 
 function logout() {
@@ -142,7 +199,7 @@ function startMatch() {
     const tossW = document.getElementById('tossWinner').value;
     const tossD = document.querySelector('input[name="tossDecision"]:checked').value;
 
-    if (!tA || !tB || !ov) return alert('Fill all fields!');
+    if (!tA || !tB || !ov) return showAlert('Fill all fields!', 'Setup Error');
 
     gameState.teamA = tA;
     gameState.teamB = tB;
@@ -197,7 +254,7 @@ function addExtra(type) {
     else {
         inn.extras.nb++;
         gameState.freeHit = true; // Next ball is Free Hit
-        alert('🎯 FREE HIT! Next ball is a Free Hit.');
+        showAlert('🎯 FREE HIT! Next ball is a Free Hit.', 'Free Hit');
     }
     inn.bowlers[inn.bowlerIdx].runs++;
     thisOverBalls.push({ type: 'extra', value: type, label: type });
@@ -237,7 +294,7 @@ function requestInput(title, placeholder) {
 async function handleWicketSelect(type) {
     // Free Hit: Only Run Out allowed
     if (gameState.freeHit && type !== 'Run Out') {
-        alert('⚠️ FREE HIT! Batter cannot be dismissed except by Run Out.');
+        await showAlert('⚠️ FREE HIT! Batter cannot be dismissed except by Run Out.', 'Free Hit');
         closeWicketModal();
         return;
     }
@@ -248,7 +305,7 @@ async function handleWicketSelect(type) {
 
     // Determine who is out for Run Out
     if (type === 'Run Out') {
-        outIdx = confirm(`Striker (${inn.batters[inn.strikerIdx].name}) Out?`) ? inn.strikerIdx : inn.nonStrikerIdx;
+        outIdx = await showConfirm(`Striker (${inn.batters[inn.strikerIdx].name}) Out?`, 'Run Out') ? inn.strikerIdx : inn.nonStrikerIdx;
     }
 
     inn.wickets++;
@@ -307,7 +364,7 @@ function checkOverEnd() {
     const inn = gameState.innings[gameState.currentInnings];
     if (inn.balls > 0 && inn.balls % 6 === 0) {
         setTimeout(() => {
-            alert('Over Over!'); rotateStrike();
+            showAlert('Over Complete!', 'Over End'); rotateStrike();
             let n = prompt('Next Bowler?', 'Bowler');
             let idx = inn.bowlers.findIndex(b => b.name === n);
             if (idx === -1) {
@@ -407,14 +464,14 @@ function updateDisplay() {
     document.getElementById('bowlingBody').innerHTML = bowlHtml;
 }
 
-function checkInningsEnd() {
+async function checkInningsEnd() {
     const inn = gameState.innings[gameState.currentInnings];
     if (gameState.currentInnings === 2 && gameState.target && inn.runs >= gameState.target) return endMatchManually();
     if (inn.balls >= gameState.maxOvers * 6 || inn.wickets >= 10) {
         if (gameState.currentInnings === 1) {
             gameState.target = inn.runs + 1;
             const reason = inn.wickets >= 10 ? 'All Out!' : 'Overs Completed!';
-            alert(`${reason} Target: ${gameState.target}\n\nStarting 2nd Innings...`);
+            await showAlert(`${reason}\nTarget: ${gameState.target}\n\nStarting 2nd Innings...`, 'Innings Break');
             setTimeout(() => startSecondInnings(), 2000);
         } else endMatchManually();
     }
@@ -520,7 +577,7 @@ async function showHistory() {
 
         document.getElementById('historyList').innerHTML = hHtml;
         switchScreen('historyScreen');
-    } catch (err) { alert('Error loading history: ' + err.message); }
+    } catch (err) { showAlert('Error loading history: ' + err.message, 'Error'); }
 }
 
 function showMatchDetail(idx) {

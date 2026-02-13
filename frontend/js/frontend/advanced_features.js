@@ -1,26 +1,26 @@
 // Advanced Cricket Features
 
-function useDRS(team) {
+async function useDRS(team) {
     const drsKey = team === 'A' ? 'drsTeamA' : 'drsTeamB';
 
     if (gameState[drsKey] <= 0) {
-        alert(`❌ No DRS reviews remaining for Team ${team}!`);
+        await showAlert(`No DRS reviews remaining for Team ${team}!`, 'DRS');
         return;
     }
 
-    const decision = confirm('🔍 DRS Review\n\nWas the umpire decision correct?\n\nOK = Decision Overturned (Review Retained)\nCancel = Decision Stands (Review Lost)');
+    const decision = await showConfirm('Was the umpire decision correct?\n\nYes = Decision Overturned (Review Retained)\nNo = Decision Stands (Review Lost)', '🔍 DRS Review');
 
     if (!decision) {
         gameState[drsKey]--;
-        alert(`📉 Review Lost! Team ${team} has ${gameState[drsKey]} review(s) remaining.`);
+        await showAlert(`Review Lost! Team ${team} has ${gameState[drsKey]} review(s) remaining.`, 'DRS Result');
     } else {
-        alert(`✅ Decision Overturned! Review retained. Team ${team} still has ${gameState[drsKey]} review(s).`);
+        await showAlert(`Decision Overturned! Review retained. Team ${team} still has ${gameState[drsKey]} review(s).`, 'DRS Result');
     }
 
     updateDisplay();
 }
 
-function setMatchStatus(status) {
+async function setMatchStatus(status) {
     gameState.matchStatus = status;
     const statusMessages = {
         'break': '☕ Match on Break',
@@ -28,27 +28,27 @@ function setMatchStatus(status) {
         'stumps': '🌙 Stumps - Day End'
     };
 
-    alert(statusMessages[status] || 'Match Status Updated');
+    await showAlert(statusMessages[status] || 'Match Status Updated', 'Match Status');
 
     if (status === 'stumps') {
-        const resume = confirm('Resume match tomorrow?');
+        const resume = await showConfirm('Resume match tomorrow?', 'Stumps');
         if (resume) {
             gameState.matchStatus = 'live';
-            alert('✅ Match Resumed!');
+            await showAlert('Match Resumed!', 'Match Status');
         }
     } else {
-        setTimeout(() => {
-            const resume = confirm('Resume match?');
+        setTimeout(async () => {
+            const resume = await showConfirm('Resume match?', 'Break Over');
             if (resume) {
                 gameState.matchStatus = 'live';
-                alert('✅ Match Resumed!');
+                await showAlert('Match Resumed!', 'Match Status');
             }
         }, 2000);
     }
 }
 
-function declareDraw() {
-    if (confirm('🤝 Declare match as DRAW?\n\nThis will end the match immediately.')) {
+async function declareDraw() {
+    if (await showConfirm('Declare match as DRAW?\n\nThis will end the match immediately.', '🤝 Draw')) {
         gameState.matchStatus = 'draw';
         const s1 = gameState.innings[1];
         const s2 = gameState.innings[2];
@@ -69,8 +69,8 @@ function declareDraw() {
     }
 }
 
-function startSuperOver() {
-    if (!confirm('🔥 START SUPER OVER?\n\nThis is a tie-breaker with 1 over per team.')) return;
+async function startSuperOver() {
+    if (!await showConfirm('START SUPER OVER?\n\nThis is a tie-breaker with 1 over per team.', '🔥 Super Over')) return;
 
     gameState.isSuperOver = true;
     gameState.maxOvers = 1;
@@ -95,6 +95,6 @@ function startSuperOver() {
         partnershipRuns: 0, partnershipBalls: 0
     };
 
-    alert('⚡ SUPER OVER MODE\n\n1 over per team. Highest score wins!');
+    await showAlert('SUPER OVER MODE\n\n1 over per team. Highest score wins!', '⚡ Super Over');
     location.reload(); // Restart with super over settings
 }
