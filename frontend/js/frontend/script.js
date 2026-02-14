@@ -296,32 +296,38 @@ function generateSquadInputs(preserve = false) {
         const valB = existingB[i] || '';
 
         divA.innerHTML += `
-            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
-                <span style="color:var(--text-secondary); font-size:0.8rem; width:20px;">${i}.</span>
-                <input type="text" id="teamA_p${i}" value="${valA}" placeholder="Player ${i}" class="input-style" style="flex:1; background:rgba(255,255,255,0.05); padding:0.5rem; border-radius:4px; border:1px solid rgba(255,255,255,0.1); color:white;">
-                <label style="cursor:pointer; display:flex; align-items:center;" title="Select Captain">
-                    <input type="radio" name="captainA" value="${i}" ${i === 1 ? 'checked' : ''}>
-                    <span style="font-size:0.75rem; color:var(--secondary-color); margin-left:4px; font-weight:bold;">C</span>
-                </label>
-                <label style="cursor:pointer; display:flex; align-items:center; margin-left:8px;" title="Select Keeper">
-                    <input type="radio" name="keeperA" value="${i}" ${i === 2 ? 'checked' : ''}>
-                    <span style="font-size:0.75rem; color:var(--primary-color); margin-left:4px; font-weight:bold;">WK</span>
-                </label>
+            <div class="squad-input-row">
+                <span class="player-index">${i}.</span>
+                <input type="text" id="teamA_p${i}" value="${valA}" placeholder="Player ${i}" class="player-input">
+                <div class="role-select">
+                    <label class="role-label" title="Select Captain">
+                        <input type="radio" name="captainA" value="${i}" ${i === 1 ? 'checked' : ''}>
+                        <span class="role-text" style="color:var(--secondary-color);">C</span>
+                    </label>
+                    <label class="role-label" title="Select Keeper">
+                        <input type="radio" name="keeperA" value="${i}" ${i === 2 ? 'checked' : ''}>
+                        <span class="role-text" style="color:var(--primary-color);">WK</span>
+                    </label>
+                </div>
             </div>`;
 
         divB.innerHTML += `
-            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
-                <span style="color:var(--text-secondary); font-size:0.8rem; width:20px;">${i}.</span>
-                <input type="text" id="teamB_p${i}" value="${valB}" placeholder="Player ${i}" class="input-style" style="flex:1; background:rgba(255,255,255,0.05); padding:0.5rem; border-radius:4px; border:1px solid rgba(255,255,255,0.1); color:white;">
-                <label style="cursor:pointer; display:flex; align-items:center;" title="Select Captain">
-                    <input type="radio" name="captainB" value="${i}" ${i === 1 ? 'checked' : ''}>
-                    <span style="font-size:0.75rem; color:var(--secondary-color); margin-left:4px; font-weight:bold;">C</span>
-                </label>
-                <label style="cursor:pointer; display:flex; align-items:center; margin-left:8px;" title="Select Keeper">
-                    <input type="radio" name="keeperB" value="${i}" ${i === 2 ? 'checked' : ''}>
-                    <span style="font-size:0.75rem; color:var(--primary-color); margin-left:4px; font-weight:bold;">WK</span>
-                </label>
+            <div class="squad-input-row">
+                <span class="player-index">${i}.</span>
+                <input type="text" id="teamB_p${i}" value="${valB}" placeholder="Player ${i}" class="player-input">
+                <div class="role-select">
+                    <label class="role-label" title="Select Captain">
+                        <input type="radio" name="captainB" value="${i}" ${i === 1 ? 'checked' : ''}>
+                        <span class="role-text" style="color:var(--secondary-color);">C</span>
+                    </label>
+                    <label class="role-label" title="Select Keeper">
+                        <input type="radio" name="keeperB" value="${i}" ${i === 2 ? 'checked' : ''}>
+                        <span class="role-text" style="color:var(--primary-color);">WK</span>
+                    </label>
+                </div>
             </div>`;
+    }
+}
     }
 }
 
@@ -834,7 +840,7 @@ function setupSecondInningsSelection() {
         extras: { total: 0, wd: 0, nb: 0, byes: 0, lb: 0 }
     };
     const inn = gameState.innings[2];
-    inn.teamName = gameState.teamB;
+    inn.teamName = gameState.bowlingTeamName;
 
     // Determine Batting and Bowling Teams for 2nd Innings
     // 1st Innings: Batting = gameState.battingTeamName, Bowling = gameState.bowlingTeamName

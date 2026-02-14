@@ -123,35 +123,31 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1rem;">
+                <div class="squad-grid">
                     <!-- Team A Squad -->
                     <div>
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <div class="squad-header">
                             <h3 id="squadTeamALabel" style="color: var(--primary-color); margin: 0; font-size: 1rem;">
                                 Team A</h3>
                             <button class="btn"
                                 style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.8rem; background: var(--secondary-color); color: var(--bg-dark); font-weight: 800; border: none;"
                                 onclick="showBulkInput('A')">📝 PASTE LIST</button>
                         </div>
-                        <div id="teamAInputs"
-                            style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 400px; overflow-y: auto; padding-right: 0.5rem;">
+                        <div id="teamAInputs" class="squad-input-container">
                             <!-- Inputs generated via JS -->
                         </div>
                     </div>
 
                     <!-- Team B Squad -->
                     <div>
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <div class="squad-header">
                             <h3 id="squadTeamBLabel" style="color: var(--secondary-color); margin: 0; font-size: 1rem;">
                                 Team B</h3>
                             <button class="btn"
                                 style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.8rem; background: var(--primary-color); color: var(--bg-dark); font-weight: 800; border: none;"
                                 onclick="showBulkInput('B')">📝 PASTE LIST</button>
                         </div>
-                        <div id="teamBInputs"
-                            style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 400px; overflow-y: auto; padding-right: 0.5rem;">
+                        <div id="teamBInputs" class="squad-input-container">
                             <!-- Inputs generated via JS -->
                         </div>
                     </div>

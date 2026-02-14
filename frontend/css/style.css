@@ -665,3 +665,107 @@ select:focus {
         transform: scale(1);
     }
 }
+
+.loader-text {
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+}
+
+/* Squad Setup Responsive Styles */
+.squad-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.squad-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.squad-input-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.squad-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 0.5rem;
+    border-radius: 8px;
+}
+
+.player-index {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    width: 20px;
+    flex-shrink: 0;
+}
+
+.player-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    min-width: 100px;
+    /* Important for flex items to shrink but not disappear */
+}
+
+.role-select {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.role-label {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.role-text {
+    font-size: 0.75rem;
+    margin-left: 2px;
+    font-weight: bold;
+}
+
+@media (max-width: 768px) {
+    .squad-grid {
+        grid-template-columns: 1fr;
+        /* Stack vertically on mobile */
+        gap: 2rem;
+    }
+
+    .squad-header {
+        margin-bottom: 0.5rem;
+    }
+
+    /* Make text smaller on mobile for squad inputs */
+    .player-input {
+        font-size: 0.9rem;
+        padding: 0.4rem;
+    }
+
+    .role-select {
+        gap: 4px;
+    }
+
+    .role-text {
+        font-size: 0.7rem;
+    }
+}
