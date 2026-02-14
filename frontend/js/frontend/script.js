@@ -226,7 +226,7 @@ function startMatch() {
     updateDisplay();
 }
 
-function addRuns(run) {
+async function addRuns(run) {
     const inn = gameState.innings[gameState.currentInnings];
     inn.runs += run; inn.balls++;
     inn.batters[inn.strikerIdx].runs += run;
@@ -243,10 +243,12 @@ function addRuns(run) {
     // Clear Free Hit after the ball
     if (gameState.freeHit) gameState.freeHit = false;
 
-    checkOverEnd(); updateDisplay(); checkInningsEnd();
+    await checkOverEnd();
+    updateDisplay();
+    await checkInningsEnd();
 }
 
-function addExtra(type) {
+async function addExtra(type) {
     const inn = gameState.innings[gameState.currentInnings];
     inn.runs++; inn.extras.total++;
     inn.partnershipRuns++;
@@ -254,11 +256,12 @@ function addExtra(type) {
     else {
         inn.extras.nb++;
         gameState.freeHit = true; // Next ball is Free Hit
-        showAlert('🎯 FREE HIT! Next ball is a Free Hit.', 'Free Hit');
+        await showAlert('🎯 FREE HIT! Next ball is a Free Hit.', 'Free Hit');
     }
     inn.bowlers[inn.bowlerIdx].runs++;
     thisOverBalls.push({ type: 'extra', value: type, label: type });
-    updateDisplay(); checkInningsEnd();
+    updateDisplay();
+    await checkInningsEnd();
 }
 
 function addWicket() { document.getElementById('wicketModal').style.display = 'flex'; }
@@ -352,7 +355,9 @@ async function handleWicketSelect(type) {
         if (outIdx === inn.strikerIdx) inn.strikerIdx = inn.batters.length - 1;
         else inn.nonStrikerIdx = inn.batters.length - 1;
     }
-    updateDisplay(); checkOverEnd(); checkInningsEnd();
+    updateDisplay();
+    await checkOverEnd();
+    await checkInningsEnd();
 }
 
 function rotateStrike() {
@@ -360,21 +365,43 @@ function rotateStrike() {
     [inn.strikerIdx, inn.nonStrikerIdx] = [inn.nonStrikerIdx, inn.strikerIdx];
 }
 
-function checkOverEnd() {
+async function checkOverEnd() {
     const inn = gameState.innings[gameState.currentInnings];
+    // Check if innings ended (Max overs or All out)
+    if (inn.balls >= gameState.maxOvers * 6 || inn.wickets >= 10) return;
+
     if (inn.balls > 0 && inn.balls % 6 === 0) {
-        setTimeout(() => {
-            showAlert('Over Complete!', 'Over End'); rotateStrike();
-            let n = prompt('Next Bowler?', 'Bowler');
-            let idx = inn.bowlers.findIndex(b => b.name === n);
-            if (idx === -1) {
-                inn.bowlers.push({ name: n || 'Bowler', balls: 0, maidens: 0, runs: 0, wickets: 0 });
-                idx = inn.bowlers.length - 1;
+        await showAlert('Over Complete!', 'Over End');
+        rotateStrike();
+
+        let validBowler = false;
+        let newBowlerName = '';
+        let newBowlerIdx = -1;
+
+        // Prevent same bowler from bowling consecutive overs
+        const currentBowlerName = inn.bowlers[inn.bowlerIdx].name;
+
+        while (!validBowler) {
+            newBowlerName = await requestInput('Next Bowler Name', 'Enter Name');
+            if (!newBowlerName) newBowlerName = 'Bowler ' + (inn.bowlers.length + 1);
+
+            // Check if same bowler
+            if (newBowlerName.trim().toLowerCase() === currentBowlerName.trim().toLowerCase() && inn.bowlers.length > 1) {
+                await showAlert(`🚫 ${currentBowlerName} cannot bowl consecutive overs!`, 'Rule Violation');
+            } else {
+                validBowler = true;
             }
-            inn.bowlerIdx = idx;
-            thisOverBalls = [];
-            updateDisplay();
-        }, 200);
+        }
+
+        let idx = inn.bowlers.findIndex(b => b.name.trim().toLowerCase() === newBowlerName.trim().toLowerCase());
+        if (idx === -1) {
+            inn.bowlers.push({ name: newBowlerName, balls: 0, maidens: 0, runs: 0, wickets: 0 });
+            idx = inn.bowlers.length - 1;
+        }
+
+        inn.bowlerIdx = idx;
+        thisOverBalls = [];
+        updateDisplay();
     }
 }
 
