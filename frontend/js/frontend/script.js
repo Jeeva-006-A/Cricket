@@ -549,10 +549,8 @@ async function calculateResult() {
 let matchHistoryData = [];
 
 async function showHistory() {
-    console.log("showHistory called at", new Date().toISOString());
     try {
         const response = await apiCall('/matches');
-        console.log("API response received:", response);
 
         // Use a local variable for iteration to be ultra-safe
         const matches = Array.isArray(response) ? response : [];
