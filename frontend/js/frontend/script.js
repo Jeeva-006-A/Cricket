@@ -183,7 +183,27 @@ window.onload = () => {
     const path = window.location.pathname;
     if (path.includes('dashboard.html')) {
         if (!authToken) window.location.href = 'login.html';
-        document.getElementById('userWelcome').innerText = `Welcome, ${currentUser}!`;
+        const welcomeEl = document.getElementById('userWelcome');
+        if (welcomeEl) welcomeEl.innerText = `Welcome, ${currentUser}!`;
+
+        // Dynamic Toss Options Logic
+        const teamAInput = document.getElementById('teamA');
+        const teamBInput = document.getElementById('teamB');
+        const tossSelect = document.getElementById('tossWinner');
+
+        function updateTossOptions() {
+            if (tossSelect && teamAInput && teamBInput) {
+                const valA = teamAInput.value || 'Team A';
+                const valB = teamBInput.value || 'Team B';
+                tossSelect.options[0].text = valA;
+                tossSelect.options[0].value = valA;
+                tossSelect.options[1].text = valB;
+                tossSelect.options[1].value = valB;
+            }
+        }
+
+        if (teamAInput) teamAInput.addEventListener('input', updateTossOptions);
+        if (teamBInput) teamBInput.addEventListener('input', updateTossOptions);
     } else if (path.includes('login.html') || path.includes('signup.html')) {
         if (authToken) window.location.href = 'dashboard.html';
     } else {
@@ -207,7 +227,7 @@ function startMatch() {
     gameState.teamB = tB;
     gameState.maxOvers = parseInt(ov);
 
-    const tossWinnerName = tossW === 'Team A' ? tA : tB;
+    const tossWinnerName = tossW;
     gameState.toss = `${tossWinnerName} won the toss and elected to ${tossD}`;
     document.getElementById('tossInfo').innerText = gameState.toss;
 
