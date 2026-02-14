@@ -295,8 +295,33 @@ function generateSquadInputs(preserve = false) {
         const valA = existingA[i] || '';
         const valB = existingB[i] || '';
 
-        divA.innerHTML += `<input type="text" id="teamA_p${i}" value="${valA}" placeholder="Player ${i}" class="input-style" style="margin-bottom:0.5rem; background:rgba(255,255,255,0.05); padding:0.5rem; border-radius:4px; border:1px solid rgba(255,255,255,0.1); color:white;">`;
-        divB.innerHTML += `<input type="text" id="teamB_p${i}" value="${valB}" placeholder="Player ${i}" class="input-style" style="margin-bottom:0.5rem; background:rgba(255,255,255,0.05); padding:0.5rem; border-radius:4px; border:1px solid rgba(255,255,255,0.1); color:white;">`;
+        divA.innerHTML += `
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
+                <span style="color:var(--text-secondary); font-size:0.8rem; width:20px;">${i}.</span>
+                <input type="text" id="teamA_p${i}" value="${valA}" placeholder="Player ${i}" class="input-style" style="flex:1; background:rgba(255,255,255,0.05); padding:0.5rem; border-radius:4px; border:1px solid rgba(255,255,255,0.1); color:white;">
+                <label style="cursor:pointer; display:flex; align-items:center;" title="Select Captain">
+                    <input type="radio" name="captainA" value="${i}" ${i === 1 ? 'checked' : ''}>
+                    <span style="font-size:0.75rem; color:var(--secondary-color); margin-left:4px; font-weight:bold;">C</span>
+                </label>
+                <label style="cursor:pointer; display:flex; align-items:center; margin-left:8px;" title="Select Keeper">
+                    <input type="radio" name="keeperA" value="${i}" ${i === 2 ? 'checked' : ''}>
+                    <span style="font-size:0.75rem; color:var(--primary-color); margin-left:4px; font-weight:bold;">WK</span>
+                </label>
+            </div>`;
+
+        divB.innerHTML += `
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
+                <span style="color:var(--text-secondary); font-size:0.8rem; width:20px;">${i}.</span>
+                <input type="text" id="teamB_p${i}" value="${valB}" placeholder="Player ${i}" class="input-style" style="flex:1; background:rgba(255,255,255,0.05); padding:0.5rem; border-radius:4px; border:1px solid rgba(255,255,255,0.1); color:white;">
+                <label style="cursor:pointer; display:flex; align-items:center;" title="Select Captain">
+                    <input type="radio" name="captainB" value="${i}" ${i === 1 ? 'checked' : ''}>
+                    <span style="font-size:0.75rem; color:var(--secondary-color); margin-left:4px; font-weight:bold;">C</span>
+                </label>
+                <label style="cursor:pointer; display:flex; align-items:center; margin-left:8px;" title="Select Keeper">
+                    <input type="radio" name="keeperB" value="${i}" ${i === 2 ? 'checked' : ''}>
+                    <span style="font-size:0.75rem; color:var(--primary-color); margin-left:4px; font-weight:bold;">WK</span>
+                </label>
+            </div>`;
     }
 }
 
@@ -304,12 +329,25 @@ function goToPlayerSelection() {
     const count = parseInt(document.getElementById('playersPerTeam').value) || 11;
     gameState.squads = { A: [], B: [] };
 
+    const capAIdx = document.querySelector('input[name="captainA"]:checked')?.value || 1;
+    const capBIdx = document.querySelector('input[name="captainB"]:checked')?.value || 1;
+    const keepAIdx = document.querySelector('input[name="keeperA"]:checked')?.value || 2;
+    const keepBIdx = document.querySelector('input[name="keeperB"]:checked')?.value || 2;
+
     for (let i = 1; i <= count; i++) {
-        const pA = document.getElementById(`teamA_p${i}`).value || `Player A${i}`;
-        const pB = document.getElementById(`teamB_p${i}`).value || `Player B${i}`;
+        let pA = document.getElementById(`teamA_p${i}`).value || `Player A${i}`;
+        let pB = document.getElementById(`teamB_p${i}`).value || `Player B${i}`;
+
+        if (i == capAIdx) pA += ' (C)';
+        if (i == keepAIdx) pA += ' (WK)';
+
+        if (i == capBIdx) pB += ' (C)';
+        if (i == keepBIdx) pB += ' (WK)';
+
         gameState.squads.A.push(pA);
         gameState.squads.B.push(pB);
     }
+
 
     // Add Joker Player to both squads if exists
     const jokerName = document.getElementById('jokerPlayer') ? document.getElementById('jokerPlayer').value.trim() : '';
