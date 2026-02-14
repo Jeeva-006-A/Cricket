@@ -471,21 +471,51 @@ async function addExtra(type) {
 function addWicket() { document.getElementById('wicketModal').style.display = 'flex'; }
 function closeWicketModal() { document.getElementById('wicketModal').style.display = 'none'; }
 
-function requestInput(title, placeholder) {
+// Helper to request input OR selection
+function requestInput(title, placeholder, options = null) {
     return new Promise((resolve) => {
         document.getElementById('inputModalTitle').innerText = title;
-        const input = document.getElementById('genericInput');
+        const container = document.querySelector('#inputModal .form-group');
+        container.innerHTML = ''; // Clear previous
+
+        let inputElement;
+
+        if (options && Array.isArray(options) && options.length > 0) {
+            // Create Select Dropdown
+            inputElement = document.createElement('select');
+            inputElement.className = 'input-style';
+            inputElement.style.background = 'rgba(255,255,255,0.05)';
+            inputElement.id = 'genericInput'; // Keep ID for consistency if needed
+
+            options.forEach(opt => {
+                const el = document.createElement('option');
+                el.value = opt;
+                el.innerText = opt;
+                inputElement.appendChild(el);
+            });
+        } else {
+            // Create Text Input
+            inputElement = document.createElement('input');
+            inputElement.type = 'text';
+            inputElement.id = 'genericInput';
+            inputElement.placeholder = placeholder;
+            inputElement.style.background = 'rgba(255,255,255,0.05)';
+        }
+
+        container.appendChild(inputElement);
         const modal = document.getElementById('inputModal');
-        input.value = '';
-        input.placeholder = placeholder;
         modal.style.display = 'flex';
-        input.focus();
+        if (inputElement.tagName === 'INPUT') inputElement.focus();
 
         const submit = document.getElementById('inputModalSubmit');
+
+        // Remove old listeners to prevent multiple fires
+        const newSubmit = submit.cloneNode(true);
+        submit.parentNode.replaceChild(newSubmit, submit);
+
         const handle = () => {
-            const val = input.value;
+            const val = inputElement.value;
             modal.style.display = 'none';
-            input.removeEventListener('keypress', keyHandle);
             resolve(val);
         };
 
@@ -493,8 +523,8 @@ function requestInput(title, placeholder) {
             if (e.key === 'Enter') handle();
         };
 
-        submit.onclick = handle;
-        input.addEventListener('keypress', keyHandle);
+        newSubmit.onclick = handle;
+        if (inputElement.tagName === 'INPUT') inputElement.addEventListener('keypress', keyHandle);
     });
 }
 
@@ -604,7 +634,14 @@ async function handleWicketSelect(type) {
     thisOverBalls.push({ type: 'wicket', value: label, label: label });
 
     if (inn.wickets < 10) { // Always ask for new batter unless all out
-        let n = await requestInput('New Batter Name', 'Enter name');
+        // Get Batting Squad
+        const battingTeamNameNow = gameState.innings[gameState.currentInnings].teamName;
+        const battingSquad = (battingTeamNameNow === gameState.teamA) ? gameState.squads.A : gameState.squads.B;
+
+        // Filter out players who are already out or currently batting
+        // (For simplicity, just show full squad for now, or advanced filter later)
+
+        let n = await requestInput('New Batter Name', 'Select Batter', battingSquad);
         // Logic to pick from squad if available, else manual
         // For now manual entry or from remaining squad logic could be added later
 
@@ -638,8 +675,24 @@ async function checkOverEnd() {
         // Prevent same bowler from bowling consecutive overs
         const currentBowlerName = inn.bowlers[inn.bowlerIdx].name;
 
+        // Get Bowling Squad
+        const bowlingTeamName = gameState.currentInnings === 1 ? gameState.bowlingTeamName : gameState.battingTeamName; // In 2nd inn, bowling team is the one that batted first
+
+        // Logic fix: In 2nd Innings:
+        // Batting Team = Team that bowled first = gameState.bowlingTeamName
+        // Bowling Team = Team that batted first = gameState.battingTeamName
+
+        // Let's rely on Names to find Squads
+        const currentBowlingSquad = (gameState.innings[gameState.currentInnings].teamName === gameState.teamA) ? gameState.squads.B :
+            (gameState.innings[gameState.currentInnings].teamName === gameState.teamB ? gameState.squads.A : []);
+
+        // Wait, innings.teamName is the BATTING team. So bowling squad is the OTHER team.
+        const battingTeamNameNow = gameState.innings[gameState.currentInnings].teamName;
+        const bowlingSquad = (battingTeamNameNow === gameState.teamA) ? gameState.squads.B : gameState.squads.A;
+
+
         while (!validBowler) {
-            newBowlerName = await requestInput('Next Bowler Name', 'Enter Name');
+            newBowlerName = await requestInput('Next Bowler Name', 'Select Bowler', bowlingSquad);
             if (!newBowlerName) newBowlerName = 'Bowler ' + (inn.bowlers.length + 1);
 
             // Check if same bowler
@@ -770,7 +823,8 @@ function switchScorecard(innNum) {
     updateDisplay();
 }
 
-async function startSecondInnings() {
+// New Function to Setup 2nd Innings Selection Screen
+function setupSecondInningsSelection() {
     gameState.currentInnings = 2;
     gameState.innings[2] = {
         runs: 0, wickets: 0, balls: 0,
@@ -782,18 +836,93 @@ async function startSecondInnings() {
     const inn = gameState.innings[2];
     inn.teamName = gameState.teamB;
 
-    const opener1 = await requestInput('Opener 1 Name', 'Enter name');
-    const opener2 = await requestInput('Opener 2 Name', 'Enter name');
-    const bowler = await requestInput('Opening Bowler Name', 'Enter name');
+    // Determine Batting and Bowling Teams for 2nd Innings
+    // 1st Innings: Batting = gameState.battingTeamName, Bowling = gameState.bowlingTeamName
+    // 2nd Innings: Batting = gameState.bowlingTeamName, Bowling = gameState.battingTeamName
 
+    // BUT gameState.teamA and teamB are fixed. We need to know which SQUAD to use.
+    // gameState.battingTeamName stores name of team batting FIRST.
+    // So 2nd Innings Batting Team is actually the team that bowled first.
+
+    const batTeamName = gameState.bowlingTeamName; // The team batting now (2nd inn)
+    const bowlTeamName = gameState.battingTeamName; // The team bowling now (2nd inn)
+
+    document.getElementById('battingTeamName').innerText = batTeamName;
+    document.getElementById('bowlingTeamName').innerText = bowlTeamName;
+
+    // Get Squads
+    // If Batting Team Name is Team A, use Squad A. Else Squad B.
+    const batSquad = (batTeamName === gameState.teamA) ? gameState.squads.A : gameState.squads.B;
+    const bowlSquad = (bowlTeamName === gameState.teamA) ? gameState.squads.A : gameState.squads.B;
+
+    const fillSelect = (id, squad) => {
+        const sel = document.getElementById(id);
+        sel.innerHTML = '';
+        squad.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p;
+            opt.innerText = p;
+            sel.appendChild(opt);
+        });
+    };
+
+    fillSelect('selectStriker', batSquad);
+    fillSelect('selectNonStriker', batSquad);
+    fillSelect('selectBowler', bowlSquad);
+
+    // Default selection for non-striker
+    if (batSquad.length > 1) {
+        document.getElementById('selectNonStriker').selectedIndex = 1;
+    }
+
+    // Change Button to Start 2nd Innings
+    const btn = document.querySelector('#selectionScreen .btn-primary');
+    btn.setAttribute('onclick', 'startSecondInningsFinal()');
+    btn.innerText = '🚀 Start 2nd Innings';
+
+    switchScreen('selectionScreen');
+}
+
+function startSecondInnings() {
+    setupSecondInningsSelection();
+}
+
+function startSecondInningsFinal() {
+    const s1 = document.getElementById('selectStriker').value;
+    const s2 = document.getElementById('selectNonStriker').value;
+    const b1 = document.getElementById('selectBowler').value;
+
+    if (s1 === s2) return showAlert('Striker and Non-Striker cannot be the same!', 'Error');
+
+    const inn = gameState.innings[2];
     inn.batters = [
-        { name: opener1 || 'Batter 1', runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false },
-        { name: opener2 || 'Batter 2', runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false }
+        { name: s1, runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false },
+        { name: s2, runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false }
     ];
-    inn.bowlers = [{ name: bowler || 'Bowler', balls: 0, maidens: 0, runs: 0, wickets: 0 }];
+    inn.bowlers = [{ name: b1, balls: 0, maidens: 0, runs: 0, wickets: 0 }];
+
     document.getElementById('nextInningsBtn').style.display = 'none';
     thisOverBalls = [];
 
+    // Reset UI for 2nd Innings
+    document.getElementById('runs').innerText = '0';
+    document.getElementById('wickets').innerText = '0';
+    document.getElementById('oversCompleted').innerText = '0';
+    document.getElementById('ballsInOver').innerText = '0';
+
+    // Show Target
+    if (gameState.target) {
+        // You might want to display Target explicitly on the Match Screen
+        // For now relying on RRR logic which shows up when target exists
+    }
+
+    // Reset Button for Next Match
+    const btn = document.querySelector('#selectionScreen .btn-primary');
+    btn.setAttribute('onclick', 'startMatchFinal()');
+    btn.innerText = '🚀 Start Match';
+
+    updateDisplay();
+    switchScreen('matchScreen');
     switchScorecard(2);
 }
 
