@@ -73,13 +73,26 @@ async def signup(user: UserAuth):
     conn = get_db()
     cursor = conn.cursor()
     try:
+        # Use email as default username if not provided
+        uname = user.username or user.email
         hashed_password = get_password_hash(user.password)
-        cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (user.username, hashed_password))
+        
+        # Check if email already exists
+        cursor.execute("SELECT id FROM users WHERE email = %s", (user.email,))
+        if cursor.fetchone():
+             raise HTTPException(status_code=400, detail="Email already registered")
+
+        cursor.execute(
+            "INSERT INTO users (name, email, username, password) VALUES (%s, %s, %s, %s)", 
+            (user.name, user.email, uname, hashed_password)
+        )
         conn.commit()
         return {"message": "User created successfully"}
     except Exception as e:
         if "unique constraint" in str(e).lower():
-            raise HTTPException(status_code=400, detail="Username already exists")
+            if "users_email_key" in str(e).lower():
+                 raise HTTPException(status_code=400, detail="Email already registered")
+            raise HTTPException(status_code=400, detail="Username/Email already exists")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()
@@ -89,20 +102,21 @@ async def login(user: UserAuth):
     conn = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT id, username, password FROM users WHERE username = %s", (user.username,))
+        # Login with email
+        cursor.execute("SELECT id, name, email, password FROM users WHERE email = %s", (user.email,))
         row = cursor.fetchone()
         if not row:
-            raise HTTPException(status_code=401, detail="Invalid username or password")
+            raise HTTPException(status_code=401, detail="Invalid email or password")
         
-        # Manually map columns if we are not using RealDictCursor
-        # row structure based on query: [id, username, password]
-        db_user = {"id": row[0], "username": row[1], "password": row[2]}
+        db_user = {"id": row[0], "name": row[1], "email": row[2], "password": row[3]}
         
         if not verify_password(user.password, db_user["password"]):
-            raise HTTPException(status_code=401, detail="Invalid username or password")
+            raise HTTPException(status_code=401, detail="Invalid email or password")
         
-        token = create_access_token({"id": db_user["id"], "username": db_user["username"]})
-        return {"token": token, "username": db_user["username"]}
+        # Use name or email as display name in token
+        display_name = db_user["name"] or db_user["email"]
+        token = create_access_token({"id": db_user["id"], "username": display_name})
+        return {"token": token, "username": display_name}
     finally:
         conn.close()
 

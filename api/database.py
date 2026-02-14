@@ -35,6 +35,15 @@ def init_db():
             password TEXT
         )
     """)
+    # Add email and name columns if they don't exist
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT UNIQUE")
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT")
+    except Exception as e:
+        print(f"Migration error (ignored if columns exist): {e}")
+        conn.rollback()
+    else:
+        conn.commit()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS matches (
             id SERIAL PRIMARY KEY,

@@ -1,8 +1,10 @@
 from pydantic import BaseModel
 
 class UserAuth(BaseModel):
-    username: str
+    name: str | None = None
+    email: str
     password: str
+    username: str | None = None
 
 from typing import Any
 

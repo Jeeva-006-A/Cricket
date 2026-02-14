@@ -137,16 +137,17 @@ let gameState = {
 let thisOverBalls = [];
 
 // Auth Logic
+// Auth Logic
 async function handleLogin() {
-    const u = document.getElementById('loginUsername').value;
+    const e = document.getElementById('loginEmail').value;
     const p = document.getElementById('loginPassword').value;
-    if (!u || !p) return showAlert('Username and Password required', 'Login Error');
-    if (p.length !== 7) return showAlert('Password must be exactly 7 characters long', 'Password Error');
+    if (!e || !p) return showAlert('Email and Password required', 'Login Error');
+    if (p.length !== 8) return showAlert('Password must be exactly 8 characters long', 'Password Error');
 
     try {
         const data = await apiCall('/login', {
             method: 'POST',
-            body: JSON.stringify({ username: u, password: p })
+            body: JSON.stringify({ email: e, password: p })
         });
 
         localStorage.setItem('authToken', data.token);
@@ -156,15 +157,16 @@ async function handleLogin() {
 }
 
 async function handleSignup() {
-    const u = document.getElementById('signupUsername').value;
+    const n = document.getElementById('signupName').value;
+    const e = document.getElementById('signupEmail').value;
     const p = document.getElementById('signupPassword').value;
-    if (!u || !p) return showAlert('Username and Password required', 'Signup Error');
-    if (p.length !== 7) return showAlert('Password must be exactly 7 characters long', 'Password Error');
+    if (!n || !e || !p) return showAlert('All fields required', 'Signup Error');
+    if (p.length !== 8) return showAlert('Password must be exactly 8 characters long', 'Password Error');
 
     try {
         await apiCall('/signup', {
             method: 'POST',
-            body: JSON.stringify({ username: u, password: p })
+            body: JSON.stringify({ name: n, email: e, password: p })
         });
         await showAlert('Signup Success! Please Login.', 'Success');
         window.location.href = 'login.html';
