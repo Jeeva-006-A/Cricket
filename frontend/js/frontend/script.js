@@ -642,10 +642,13 @@ async function handleWicketSelect(type) {
     if (inn.wickets < 10) { // Always ask for new batter unless all out
         // Get Batting Squad
         const battingTeamNameNow = gameState.innings[gameState.currentInnings].teamName;
-        const battingSquad = (battingTeamNameNow === gameState.teamA) ? gameState.squads.A : gameState.squads.B;
+        const battingSquadFull = (battingTeamNameNow === gameState.teamA) ? gameState.squads.A : gameState.squads.B;
 
         // Filter out players who are already out or currently batting
-        // (For simplicity, just show full squad for now, or advanced filter later)
+        // Get list of names already in inn.batters
+        // Normalize names for comparison (trim)
+        const existingBatters = inn.batters.map(b => b.name.trim());
+        const battingSquad = battingSquadFull.filter(p => !existingBatters.includes(p.trim()));
 
         let n = await requestInput('New Batter Name', 'Select Batter', battingSquad);
         // Logic to pick from squad if available, else manual
@@ -693,8 +696,14 @@ async function checkOverEnd() {
             (gameState.innings[gameState.currentInnings].teamName === gameState.teamB ? gameState.squads.A : []);
 
         // Wait, innings.teamName is the BATTING team. So bowling squad is the OTHER team.
+        // Wait, innings.teamName is the BATTING team. So bowling squad is the OTHER team.
         const battingTeamNameNow = gameState.innings[gameState.currentInnings].teamName;
-        const bowlingSquad = (battingTeamNameNow === gameState.teamA) ? gameState.squads.B : gameState.squads.A;
+        const bowlingSquadFull = (battingTeamNameNow === gameState.teamA) ? gameState.squads.B : gameState.squads.A;
+
+        // Filter Bowlers: Exclude current bowler (cannot bowl consecutive overs)
+        // Clean name (remove whitespace) for robust comparison
+        const currentBowlerNameClean = currentBowlerName.trim();
+        const bowlingSquad = bowlingSquadFull.filter(p => p.trim() !== currentBowlerNameClean);
 
 
         while (!validBowler) {
