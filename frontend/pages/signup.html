@@ -43,6 +43,19 @@
             </section>
         </main>
     </div>
+    <div id="notificationModal" class="modal-overlay" style="display:none;">
+        <div class="glass-card modal-content" style="padding: 2rem; max-width: 400px;">
+            <h3 id="notificationTitle" style="margin-bottom: 1rem; text-align: center; color: var(--secondary-color);">
+                Notification</h3>
+            <p id="notificationMessage"
+                style="text-align: center; color: var(--text-primary); margin-bottom: 1.5rem; line-height: 1.6;">
+                Message</p>
+            <button class="btn btn-primary" id="notificationOk">OK</button>
+            <button class="btn" id="notificationCancel"
+                style="margin-top: 0.5rem; background: rgba(255,255,255,0.05); color: white; display: none;">
+                Cancel</button>
+        </div>
+    </div>
     <script src="../js/frontend/script.js"></script>
 </body>
 
