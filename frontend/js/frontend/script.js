@@ -134,7 +134,34 @@ let gameState = {
     isSuperOver: false
 };
 
+
+
 let thisOverBalls = [];
+let stateHistory = []; // Stack to store previous game states
+
+function saveState() {
+    // Deep copy current gameState and thisOverBalls
+    stateHistory.push({
+        gameState: JSON.parse(JSON.stringify(gameState)),
+        thisOverBalls: JSON.parse(JSON.stringify(thisOverBalls))
+    });
+    // Limit history to last 10 actions to save memory
+    if (stateHistory.length > 10) stateHistory.shift();
+}
+
+function undoLast() {
+    if (stateHistory.length === 0) {
+        showAlert("Nothing to undo!", "Undo");
+        return;
+    }
+
+    const previousState = stateHistory.pop();
+    gameState = previousState.gameState;
+    thisOverBalls = previousState.thisOverBalls;
+
+    updateDisplay();
+    showAlert("Last action undone.", "Undo");
+}
 
 // Auth Logic
 // Auth Logic
@@ -364,6 +391,7 @@ function startMatchFinal() {
 }
 
 async function addRuns(run) {
+    saveState();
     const inn = gameState.innings[gameState.currentInnings];
     inn.runs += run; inn.balls++;
     inn.batters[inn.strikerIdx].runs += run;
@@ -386,6 +414,7 @@ async function addRuns(run) {
 }
 
 async function addExtra(type) {
+    saveState();
     const inn = gameState.innings[gameState.currentInnings];
     inn.runs++; inn.extras.total++;
     inn.partnershipRuns++;
@@ -476,6 +505,7 @@ async function handleWicketSelect(type) {
         return;
     }
 
+    saveState();
     closeWicketModal();
     const inn = gameState.innings[gameState.currentInnings];
     let outIdx = inn.strikerIdx;
