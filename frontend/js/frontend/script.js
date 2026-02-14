@@ -284,6 +284,13 @@ function goToPlayerSelection() {
         gameState.squads.B.push(pB);
     }
 
+    // Add Joker Player to both squads if exists
+    const jokerName = document.getElementById('jokerPlayer') ? document.getElementById('jokerPlayer').value.trim() : '';
+    if (jokerName) {
+        gameState.squads.A.push(jokerName + ' (🃏)');
+        gameState.squads.B.push(jokerName + ' (🃏)');
+    }
+
     // Config Dropdowns
     const tA = gameState.teamA;
     const tB = gameState.teamB;
