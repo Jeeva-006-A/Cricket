@@ -506,8 +506,24 @@ async function checkInningsEnd() {
     }
 }
 
+function switchScorecard(innNum) {
+    if (!gameState.innings[innNum]) return;
+    gameState.viewingInnings = innNum;
+    document.querySelectorAll('.innings-tabs .tab').forEach(t => t.classList.remove('active'));
+    const tab = document.getElementById(`tabInnings${innNum}`);
+    if (tab) tab.classList.add('active');
+    updateDisplay();
+}
+
 async function startSecondInnings() {
     gameState.currentInnings = 2;
+    gameState.innings[2] = {
+        runs: 0, wickets: 0, balls: 0,
+        batters: [], bowlers: [],
+        bowlerIdx: 0, strikerIdx: 0, nonStrikerIdx: 1,
+        partnershipRuns: 0, partnershipBalls: 0,
+        extras: { total: 0, wd: 0, nb: 0, byes: 0, lb: 0 }
+    };
     const inn = gameState.innings[2];
     inn.teamName = gameState.teamB;
 
@@ -522,7 +538,8 @@ async function startSecondInnings() {
     inn.bowlers = [{ name: bowler || 'Bowler', balls: 0, maidens: 0, runs: 0, wickets: 0 }];
     document.getElementById('nextInningsBtn').style.display = 'none';
     thisOverBalls = [];
-    updateDisplay();
+
+    switchScorecard(2);
 }
 
 function endMatchManually() { calculateResult(); switchScreen('resultScreen'); }
