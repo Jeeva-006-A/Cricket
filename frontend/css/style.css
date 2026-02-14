@@ -576,10 +576,11 @@ select:focus {
 }
 
 .loader-overlay.hidden {
-    opacity: 0;
-    visibility: hidden;
-    transition: none;
-    /* Hide instantly */
+    opacity: 0 !important;
+    visibility: hidden !important;
+    display: none !important;
+    /* Ensure it is removed from layout */
+    transition: none !important;
 }
 
 /* Premium Cricket Ball Spinner */
