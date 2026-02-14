@@ -578,6 +578,8 @@ select:focus {
 .loader-overlay.hidden {
     opacity: 0;
     visibility: hidden;
+    transition: none;
+    /* Hide instantly */
 }
 
 /* Premium Cricket Ball Spinner */

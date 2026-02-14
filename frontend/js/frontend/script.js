@@ -26,7 +26,7 @@ function hideLoader() {
 // Hide loader on initial page load once content is ready
 document.addEventListener('DOMContentLoaded', () => {
     // Initial hide with a slight delay for that premium feel
-    setTimeout(hideLoader, 800);
+    setTimeout(hideLoader, 100);
 });
 
 // Custom Alert/Confirm Functions
@@ -1083,5 +1083,5 @@ function switchScreen(id) {
         document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         hideLoader();
-    }, 300);
+    }, 50); // Reduced delay for faster transition
 }
