@@ -27,8 +27,7 @@ function hideLoader() {
 
 // Hide loader on initial page load once content is ready
 document.addEventListener('DOMContentLoaded', () => {
-    // Initial hide with a slight delay for that premium feel
-    setTimeout(hideLoader, 100);
+    hideLoader();
 });
 
 // Custom Alert/Confirm Functions
@@ -166,7 +165,6 @@ function undoLast() {
 }
 
 // Auth Logic
-// Auth Logic
 async function handleLogin() {
     const e = document.getElementById('loginEmail').value;
     const p = document.getElementById('loginPassword').value;
@@ -210,8 +208,13 @@ function logout() {
 // Page Load Logic
 window.onload = () => {
     const path = window.location.pathname;
+
+    // Auth-guarded pages
     if (path.includes('dashboard.html')) {
-        if (!authToken) window.location.href = 'login.html';
+        if (!authToken) {
+            window.location.href = 'login.html';
+            return;
+        }
         const welcomeEl = document.getElementById('userWelcome');
         if (welcomeEl) welcomeEl.innerText = `Welcome, ${currentUser}!`;
 
@@ -234,14 +237,17 @@ window.onload = () => {
         if (teamAInput) teamAInput.addEventListener('input', updateTossOptions);
         if (teamBInput) teamBInput.addEventListener('input', updateTossOptions);
     } else if (path.includes('login.html') || path.includes('signup.html')) {
-        if (authToken) window.location.href = 'dashboard.html';
-    } else {
-        // Root redirect - check if we are at index.html in the root of the app
+        if (authToken) {
+            window.location.href = 'dashboard.html';
+            return;
+        }
+    } else if (path === '/' || path.endsWith('index.html')) {
+        // Redirection for root handled in index.html head as well, keeping as fallback
         window.location.href = authToken ? 'pages/dashboard.html' : 'pages/login.html';
     }
-};
 
-// --- CRICKET LOGIC --- (Reused from previous version)
+    hideLoader(); // Final ensure hide
+};
 
 // --- CRICKET LOGIC --- (Reused from previous version)
 
@@ -328,8 +334,6 @@ function generateSquadInputs(preserve = false) {
                     </label>
                 </div>
             </div>`;
-    }
-}
     }
 }
 
@@ -943,7 +947,7 @@ function startSecondInningsFinal() {
     switchScorecard(2);
 }
 
-function endMatchManually() { calculateResult(); switchScreen('resultScreen'); }
+function endMatch() { calculateResult(); switchScreen('resultScreen'); }
 
 async function calculateResult() {
     const s1 = gameState.innings[1]; const s2 = gameState.innings[2];

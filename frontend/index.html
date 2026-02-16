@@ -5,7 +5,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CricScore Pro</title>
+    <script>
+        // Immediate redirect before page load for better performance
+        const authToken = localStorage.getItem('authToken');
+        const path = window.location.pathname;
+        if (path === '/' || path.endsWith('index.html')) {
+            window.location.href = authToken ? 'pages/dashboard.html' : 'pages/login.html';
+        }
+    </script>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏏</text></svg>">
 </head>
 
 <body style="background: #0f172a; display: flex; align-items: center; justify-content: center; height: 100vh;">
