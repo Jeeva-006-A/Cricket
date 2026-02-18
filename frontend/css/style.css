@@ -110,28 +110,32 @@ label {
 }
 
 input,
-select {
+select,
+.input-style {
     width: 100%;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.08) !important;
     border: 1px solid var(--glass-border);
     border-radius: 12px;
     padding: 1rem;
-    color: white;
+    color: white !important;
     font-size: 1rem;
     outline: none;
     transition: 0.3s;
+    color-scheme: dark;
+    /* Forces browser widgets to use dark mode */
 }
 
 input:focus,
-select:focus {
+select:focus,
+.input-style:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
 }
 
+/* Fallback for older browsers or stubborn dropdowns */
 select option {
-    background: #1e293b;
+    background-color: #1e293b;
     color: white;
-    padding: 10px;
 }
 
 .btn {
