@@ -89,7 +89,7 @@ function showConfirm(message, title = 'Confirm') {
 
 // Helper to handle API responses safely
 async function apiCall(endpoint, options = {}) {
-    showLoader();
+    if (!options.silent) showLoader();
     try {
         const response = await fetch(API_BASE + endpoint, {
             ...options,
@@ -116,7 +116,7 @@ async function apiCall(endpoint, options = {}) {
             throw new Error("Backend Server returned unexpected format. Check backend logs.");
         }
     } finally {
-        hideLoader();
+        if (!options.silent) hideLoader();
     }
 }
 
@@ -132,7 +132,10 @@ let gameState = {
     drsTeamA: 2,
     drsTeamB: 2,
     matchStatus: 'live', // 'live', 'break', 'lunch', 'stumps', 'draw'
-    isSuperOver: false
+    isSuperOver: false,
+    matchId: null,
+    matchCode: '',
+    isViewer: false
 };
 
 
@@ -410,16 +413,18 @@ function goToPlayerSelection() {
     switchScreen('selectionScreen');
 }
 
-function startMatchFinal() {
+async function startMatchFinal() {
     const s1 = document.getElementById('selectStriker').value;
     const s2 = document.getElementById('selectNonStriker').value;
     const b1 = document.getElementById('selectBowler').value;
 
     if (s1 === s2) return showAlert('Striker and Non-Striker cannot be the same!', 'Error');
+    if (!s1 || !s2 || !b1) return showAlert('Please select Striker, Non-Striker and Bowler!', 'Error');
 
     // Initialize Game State
     gameState.toss = `${gameState.tossData.winner} won the toss and elected to ${gameState.tossData.decision}`;
-    document.getElementById('tossInfo').innerText = gameState.toss;
+    const tossInfoEl = document.getElementById('tossInfo');
+    if (tossInfoEl) tossInfoEl.innerText = gameState.toss;
 
     const battingTeam = gameState.battingTeamName;
     const bowlingTeam = gameState.bowlingTeamName;
@@ -432,12 +437,35 @@ function startMatchFinal() {
         { name: s2, runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false }
     ];
     gameState.innings[1].bowlers = [{ name: b1, balls: 0, maidens: 0, runs: 0, wickets: 0 }];
+    gameState.innings[1].strikerIdx = 0;
+    gameState.innings[1].nonStrikerIdx = 1;
+    gameState.innings[1].bowlerIdx = 0;
 
     document.getElementById('displayTeams').innerText = `${gameState.teamA} vs ${gameState.teamB}`;
     document.getElementById('maxOvers').innerText = gameState.maxOvers;
 
+    // Transition immediately
     switchScreen('matchScreen');
     updateDisplay();
+
+    // Create match on backend in background
+    try {
+        const res = await apiCall('/matches', {
+            method: 'POST',
+            body: JSON.stringify({
+                teamA: gameState.teamA,
+                teamB: gameState.teamB,
+                scoreData: gameState.innings,
+                result: 'Live'
+            })
+        });
+        gameState.matchId = res.id;
+        gameState.matchCode = res.match_code;
+        updateDisplay(); // Re-update to show code
+    } catch (err) {
+        console.error("Could not sync initial match state:", err);
+        // Don't alert here to avoid interrupting the user, but maybe show a small toast later
+    }
 }
 
 async function addRuns(run) {
@@ -738,12 +766,47 @@ async function checkOverEnd() {
 
 function updateDisplay() {
     const inn = gameState.innings[gameState.currentInnings];
-    document.getElementById('runs').innerText = inn.runs;
-    document.getElementById('wickets').innerText = inn.wickets;
-    document.getElementById('oversCompleted').innerText = Math.floor(inn.balls / 6);
-    document.getElementById('ballsInOver').innerText = inn.balls % 6;
-    document.getElementById('maxOvers').innerText = gameState.maxOvers;
-    document.getElementById('displayTeams').innerText = `${gameState.teamA} vs ${gameState.teamB}`;
+    if (!inn) return;
+
+    if (document.getElementById('runs')) document.getElementById('runs').innerText = inn.runs;
+    if (document.getElementById('wickets')) document.getElementById('wickets').innerText = inn.wickets;
+    if (document.getElementById('oversCompleted')) document.getElementById('oversCompleted').innerText = Math.floor(inn.balls / 6);
+    if (document.getElementById('ballsInOver')) document.getElementById('ballsInOver').innerText = inn.balls % 6;
+    if (document.getElementById('maxOvers')) document.getElementById('maxOvers').innerText = gameState.maxOvers;
+    if (document.getElementById('displayTeams')) document.getElementById('displayTeams').innerText = `${gameState.teamA} vs ${gameState.teamB}`;
+
+    // Update Match Code
+    const codeEl = document.getElementById('currentMatchCode');
+    if (codeEl) codeEl.innerText = gameState.matchCode || '------';
+
+    // Hide controls if viewer
+    const controls = document.querySelector('.controls');
+    const advControls = document.querySelector('section#matchScreen .controls')?.nextElementSibling;
+    const undoEndBtns = document.querySelector('section#matchScreen div[style*="margin-top: 2rem"]');
+
+    if (gameState.isViewer) {
+        if (controls) controls.style.display = 'none';
+        if (advControls) advControls.style.display = 'none';
+        if (undoEndBtns) {
+            Array.from(undoEndBtns.children).forEach(btn => {
+                if (btn.id !== 'leaveViewBtn') btn.style.display = 'none';
+                else btn.style.display = 'block';
+            });
+        }
+        const codeDisplay = document.getElementById('matchCodeDisplay');
+        if (codeDisplay) codeDisplay.style.background = 'rgba(0, 255, 136, 0.1)';
+        if (codeDisplay) codeDisplay.style.color = 'var(--primary-color)';
+    } else {
+        const leaveBtn = document.getElementById('leaveViewBtn');
+        if (leaveBtn) leaveBtn.style.display = 'none';
+        if (controls) controls.style.display = 'grid';
+        if (advControls) advControls.style.display = 'block'; // Added this for consistency
+        if (undoEndBtns) {
+            Array.from(undoEndBtns.children).forEach(btn => {
+                if (btn.id !== 'leaveViewBtn') btn.style.display = 'block';
+            });
+        }
+    }
 
     // Free Hit Indicator
     const freeHitEl = document.getElementById('freeHitIndicator');
@@ -759,32 +822,34 @@ function updateDisplay() {
 
     // Run Rate Calculations
     const crr = inn.balls > 0 ? (inn.runs / (inn.balls / 6)).toFixed(2) : '0.00';
-    document.getElementById('crr').innerText = crr;
+    if (document.getElementById('crr')) document.getElementById('crr').innerText = crr;
 
     if (gameState.currentInnings === 2 && gameState.target) {
         const ballsLeft = (gameState.maxOvers * 6) - inn.balls;
         const runsToWin = gameState.target - inn.runs;
         if (ballsLeft > 0) {
             const rrr = (runsToWin / (ballsLeft / 6)).toFixed(2);
-            document.getElementById('rrr').innerText = rrr;
-            document.getElementById('rrrContainer').style.display = 'inline';
+            if (document.getElementById('rrr')) document.getElementById('rrr').innerText = rrr;
+            if (document.getElementById('rrrContainer')) document.getElementById('rrrContainer').style.display = 'inline';
         }
     }
 
     // Partnership Update
-    document.getElementById('currentPartnership').innerText = `${inn.partnershipRuns} (${inn.partnershipBalls})`;
+    if (document.getElementById('currentPartnership')) document.getElementById('currentPartnership').innerText = `${inn.partnershipRuns} (${inn.partnershipBalls})`;
 
-    if (inn.strikerIdx !== -1) {
-        document.getElementById('strikerName').innerText = inn.batters[inn.strikerIdx].name + '*';
-        document.getElementById('strikerRuns').innerText = `${inn.batters[inn.strikerIdx].runs}(${inn.batters[inn.strikerIdx].balls})`;
+    if (inn.batters && inn.batters[inn.strikerIdx]) {
+        if (document.getElementById('strikerName')) document.getElementById('strikerName').innerText = inn.batters[inn.strikerIdx].name + '*';
+        if (document.getElementById('strikerRuns')) document.getElementById('strikerRuns').innerText = `${inn.batters[inn.strikerIdx].runs}(${inn.batters[inn.strikerIdx].balls})`;
     }
-    if (inn.nonStrikerIdx !== -1) {
-        document.getElementById('nonStrikerName').innerText = inn.batters[inn.nonStrikerIdx].name;
-        document.getElementById('nonStrikerRuns').innerText = `${inn.batters[inn.nonStrikerIdx].runs}(${inn.batters[inn.nonStrikerIdx].balls})`;
+    if (inn.batters && inn.batters[inn.nonStrikerIdx]) {
+        if (document.getElementById('nonStrikerName')) document.getElementById('nonStrikerName').innerText = inn.batters[inn.nonStrikerIdx].name;
+        if (document.getElementById('nonStrikerRuns')) document.getElementById('nonStrikerRuns').innerText = `${inn.batters[inn.nonStrikerIdx].runs}(${inn.batters[inn.nonStrikerIdx].balls})`;
     }
-    const b = inn.bowlers[inn.bowlerIdx];
-    document.getElementById('bowlerName').innerText = b.name;
-    document.getElementById('bowlerStats').innerText = `${b.wickets}-${b.runs} (${Math.floor(b.balls / 6)}.${b.balls % 6} ov)`;
+    const b = inn.bowlers && inn.bowlers[inn.bowlerIdx];
+    if (b) {
+        if (document.getElementById('bowlerName')) document.getElementById('bowlerName').innerText = b.name;
+        if (document.getElementById('bowlerStats')) document.getElementById('bowlerStats').innerText = `${b.wickets}-${b.runs} (${Math.floor(b.balls / 6)}.${b.balls % 6} ov)`;
+    }
 
     // Scorecard Update
     const vI = gameState.innings[gameState.viewingInnings];
@@ -1087,7 +1152,126 @@ function switchScreen(id) {
     showLoader();
     setTimeout(() => {
         document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
+        const target = document.getElementById(id);
+        if (target) target.classList.add('active');
         hideLoader();
-    }, 50); // Reduced delay for faster transition
+    }, 50);
+}
+
+async function syncMatchWithBackend() {
+    if (!gameState.matchId || gameState.isViewer) return;
+    try {
+        // Embed some metadata into innings for the viewer
+        gameState.innings[0] = {
+            maxOvers: gameState.maxOvers,
+            toss: gameState.toss,
+            teamA: gameState.teamA,
+            teamB: gameState.teamB,
+            thisOverBalls: thisOverBalls,
+            matchStatus: gameState.matchStatus
+        };
+
+        await apiCall(`/matches/${gameState.matchId}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                teamA: gameState.teamA,
+                teamB: gameState.teamB,
+                scoreData: gameState.innings,
+                result: gameState.matchStatus === 'live' ? 'Live' : (gameState.matchStatus === 'draw' ? 'Match Drawn' : 'Match Ended')
+            }),
+            silent: true
+        });
+    } catch (err) {
+        console.error("Sync Error:", err);
+    }
+}
+
+async function viewMatchByCode() {
+    const codeInp = document.getElementById('viewMatchCode');
+    const code = codeInp ? codeInp.value.trim().toUpperCase() : '';
+    if (!code) return showAlert('Please enter a match code', 'Error');
+
+    try {
+        const match = await apiCall(`/matches/code/${code}`);
+
+        // Setup state for viewer
+        gameState.teamA = match.team_a;
+        gameState.teamB = match.team_b;
+        gameState.innings = match.score_data;
+        gameState.matchId = match.id;
+        gameState.matchCode = match.match_code;
+        gameState.isViewer = true;
+
+        // Extract metadata from innings[0]
+        if (gameState.innings[0]) {
+            gameState.maxOvers = gameState.innings[0].maxOvers || 20;
+            gameState.toss = gameState.innings[0].toss || '';
+            thisOverBalls = gameState.innings[0].thisOverBalls || [];
+            gameState.matchStatus = gameState.innings[0].matchStatus || 'live';
+            document.getElementById('tossInfo').innerText = gameState.toss;
+        }
+
+        switchScreen('matchScreen');
+        updateDisplay();
+
+        // Start polling for updates
+        startLiveUpdate();
+    } catch (err) {
+        showAlert('Match not found or error: ' + err.message, 'Error');
+    }
+}
+
+let liveUpdateInterval = null;
+function startLiveUpdate() {
+    if (liveUpdateInterval) clearInterval(liveUpdateInterval);
+    liveUpdateInterval = setInterval(async () => {
+        if (!gameState.matchCode || !gameState.isViewer) {
+            clearInterval(liveUpdateInterval);
+            return;
+        }
+        try {
+            const match = await apiCall(`/matches/code/${gameState.matchCode}`, { silent: true });
+            gameState.innings = match.score_data;
+            if (gameState.innings[0]) {
+                thisOverBalls = gameState.innings[0].thisOverBalls || [];
+                gameState.matchStatus = gameState.innings[0].matchStatus || 'live';
+            }
+            updateDisplay();
+        } catch (err) {
+            console.error("Live Update Error:", err);
+        }
+    }, 5000); // Update every 5 seconds
+}
+
+function leaveView() {
+    if (liveUpdateInterval) clearInterval(liveUpdateInterval);
+    gameState.isViewer = false;
+    gameState.matchCode = '';
+    gameState.matchId = null;
+    location.reload(); // Simplest way to reset everything
+}
+
+// Intercept actions to sync with backend
+const originalAddRuns = addRuns;
+addRuns = async function (run) {
+    await originalAddRuns(run);
+    syncMatchWithBackend();
+};
+
+const originalAddExtra = addExtra;
+addExtra = async function (type) {
+    await originalAddExtra(type);
+    syncMatchWithBackend();
+};
+
+const originalHandleWicketSelect = handleWicketSelect;
+handleWicketSelect = async function (type) {
+    await originalHandleWicketSelect(type);
+    syncMatchWithBackend();
+};
+
+const originalRotateStrike = rotateStrike;
+rotateStrike = function () {
+    originalRotateStrike();
+    syncMatchWithBackend();
 }

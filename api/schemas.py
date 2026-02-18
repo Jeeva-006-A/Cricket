@@ -13,3 +13,4 @@ class MatchData(BaseModel):
     teamB: str
     scoreData: Any
     result: str
+    match_code: str | None = None

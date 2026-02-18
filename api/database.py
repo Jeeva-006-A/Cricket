@@ -52,9 +52,18 @@ def init_db():
             team_b TEXT,
             score_data TEXT,
             result TEXT,
+            match_code TEXT UNIQUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
     """)
+    # Add match_code column if it doesn't exist
+    try:
+        cursor.execute("ALTER TABLE matches ADD COLUMN IF NOT EXISTS match_code TEXT UNIQUE")
+    except Exception as e:
+        print(f"Migration error for match_code: {e}")
+        conn.rollback()
+    else:
+        conn.commit()
     conn.commit()
     conn.close()

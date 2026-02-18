@@ -51,6 +51,19 @@
                         <p style="font-size: 0.8rem; color: var(--text-secondary);">Review scores and analytics of your
                             previous matches.</p>
                     </div>
+                    <div class="glass-card"
+                        style="padding: 1.5rem; border: 1px solid #4a90e2; background: rgba(74, 144, 226, 0.05);">
+                        <h3 style="color: #4a90e2; margin-bottom: 0.5rem;">👁️ View Match</h3>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Enter match
+                            code to watch a live match.</p>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" id="viewMatchCode" placeholder="Enter Code (e.g. AB12CD)"
+                                style="flex: 1; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(74, 144, 226, 0.3); background: rgba(255,255,255,0.05); color: white; text-transform: uppercase;">
+                            <button class="btn"
+                                style="width: auto; padding: 0.5rem 1rem; background: #4a90e2; color: white;"
+                                onclick="viewMatchByCode()">View</button>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -212,6 +225,10 @@
                     <div class="team-names" id="displayTeams">Team A vs Team B</div>
                     <div id="tossInfo" style="font-size: 0.8rem; color: var(--secondary-color); margin-bottom: 0.5rem;">
                         Toss Info</div>
+                    <div id="matchCodeDisplay"
+                        style="font-size: 0.75rem; color: #4a90e2; margin-bottom: 1rem; background: rgba(74, 144, 226, 0.1); padding: 4px 10px; border-radius: 20px; display: inline-block;">
+                        Code: <span id="currentMatchCode" style="font-weight: 800; letter-spacing: 1px;">------</span>
+                    </div>
                     <div class="score-main"><span id="runs">0</span> / <span id="wickets">0</span></div>
                     <div class="overs-display">Overs: <span id="oversCompleted">0</span>.<span id="ballsInOver">0</span>
                         (<span id="maxOvers">0</span>)</div>
@@ -357,6 +374,8 @@
                     <button class="btn btn-wicket" id="nextInningsBtn" style="display:none;"
                         onclick="startSecondInnings()">Start 2nd Innings</button>
                     <button class="btn btn-danger" id="endMatchBtn" onclick="endMatch()">End Match</button>
+                    <button class="btn" id="leaveViewBtn" style="background: #4a90e2; color: white; display: none;"
+                        onclick="leaveView()">Leave View</button>
                 </div>
             </section>
 

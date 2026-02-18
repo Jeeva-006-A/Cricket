@@ -120,18 +120,65 @@ async def login(user: UserAuth):
     finally:
         conn.close()
 
+import random
+import string
+
+def generate_match_code(length=6):
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+
 @app.post("/api/matches")
 async def save_match(match: MatchData, user_id: int = Depends(get_current_user)):
     conn = get_db()
     cursor = conn.cursor()
     try:
+        # Generate code if not provided
+        m_code = match.match_code or generate_match_code()
+        
         cursor.execute(
-            "INSERT INTO matches (user_id, team_a, team_b, score_data, result) VALUES (%s, %s, %s, %s, %s) RETURNING id",
-            (user_id, match.teamA, match.teamB, json.dumps(match.scoreData), match.result)
+            "INSERT INTO matches (user_id, team_a, team_b, score_data, result, match_code) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id, match_code",
+            (user_id, match.teamA, match.teamB, json.dumps(match.scoreData), match.result, m_code)
         )
-        match_id = cursor.fetchone()[0]
+        row = cursor.fetchone()
+        match_id = row[0]
+        match_code = row[1]
         conn.commit()
-        return {"id": match_id}
+        return {"id": match_id, "match_code": match_code}
+    finally:
+        conn.close()
+
+@app.put("/api/matches/{match_id}")
+async def update_match(match_id: int, match: MatchData, user_id: int = Depends(get_current_user)):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE matches SET score_data = %s, result = %s WHERE id = %s AND user_id = %s",
+            (json.dumps(match.scoreData), match.result, match_id, user_id)
+        )
+        conn.commit()
+        return {"status": "updated"}
+    finally:
+        conn.close()
+
+@app.get("/api/matches/code/{match_code}")
+async def get_match_by_code(match_code: str):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id, team_a, team_b, score_data, result, created_at, match_code FROM matches WHERE match_code = %s", (match_code.upper(),))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Match not found")
+        
+        return {
+            "id": row[0],
+            "team_a": row[1],
+            "team_b": row[2],
+            "score_data": json.loads(row[3]) if isinstance(row[3], str) else row[3],
+            "result": row[4],
+            "created_at": row[5].isoformat() if hasattr(row[5], "isoformat") else row[5],
+            "match_code": row[6]
+        }
     finally:
         conn.close()
 
@@ -141,19 +188,20 @@ async def get_matches(user_id: int = Depends(get_current_user)):
     cursor = conn.cursor()
     try:
         # Explicitly list columns to make manual mapping easier
-        cursor.execute("SELECT id, team_a, team_b, score_data, result, created_at FROM matches WHERE user_id = %s ORDER BY created_at DESC", (user_id,))
+        cursor.execute("SELECT id, team_a, team_b, score_data, result, created_at, match_code FROM matches WHERE user_id = %s ORDER BY created_at DESC", (user_id,))
         rows = cursor.fetchall()
         
         matches = []
         for row in rows:
-            # Map columns manually: [id, team_a, team_b, score_data, result, created_at]
+            # Map columns manually: [id, team_a, team_b, score_data, result, created_at, match_code]
             match_item = {
                 "id": row[0],
                 "team_a": row[1],
                 "team_b": row[2],
                 "score_data": json.loads(row[3]) if isinstance(row[3], str) else row[3],
                 "result": row[4],
-                "created_at": row[5].isoformat() if hasattr(row[5], "isoformat") else row[5]
+                "created_at": row[5].isoformat() if hasattr(row[5], "isoformat") else row[5],
+                "match_code": row[6]
             }
             matches.append(match_item)
         return matches
