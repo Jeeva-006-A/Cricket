@@ -894,14 +894,14 @@ function updateDisplay() {
 
 async function checkInningsEnd() {
     const inn = gameState.innings[gameState.currentInnings];
-    if (gameState.currentInnings === 2 && gameState.target && inn.runs >= gameState.target) return endMatchManually();
+    if (gameState.currentInnings === 2 && gameState.target && inn.runs >= gameState.target) return endMatch();
     if (inn.balls >= gameState.maxOvers * 6 || inn.wickets >= 10) {
         if (gameState.currentInnings === 1) {
             gameState.target = inn.runs + 1;
             const reason = inn.wickets >= 10 ? 'All Out!' : 'Overs Completed!';
             await showAlert(`${reason}\nTarget: ${gameState.target}\n\nStarting 2nd Innings...`, 'Innings Break');
             setTimeout(() => startSecondInnings(), 2000);
-        } else endMatchManually();
+        } else endMatch();
     }
 }
 
