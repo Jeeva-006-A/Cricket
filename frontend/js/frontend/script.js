@@ -413,6 +413,10 @@ function goToPlayerSelection() {
     switchScreen('selectionScreen');
 }
 
+function generateMatchCode() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
 async function startMatchFinal() {
     const s1 = document.getElementById('selectStriker').value;
     const s2 = document.getElementById('selectNonStriker').value;
@@ -425,6 +429,9 @@ async function startMatchFinal() {
     gameState.toss = `${gameState.tossData.winner} won the toss and elected to ${gameState.tossData.decision}`;
     const tossInfoEl = document.getElementById('tossInfo');
     if (tossInfoEl) tossInfoEl.innerText = gameState.toss;
+
+    // Generate Code Immediately
+    gameState.matchCode = generateMatchCode();
 
     const battingTeam = gameState.battingTeamName;
     const bowlingTeam = gameState.bowlingTeamName;
@@ -456,15 +463,13 @@ async function startMatchFinal() {
                 teamA: gameState.teamA,
                 teamB: gameState.teamB,
                 scoreData: gameState.innings,
-                result: 'Live'
+                result: 'Live',
+                match_code: gameState.matchCode
             })
         });
         gameState.matchId = res.id;
-        gameState.matchCode = res.match_code;
-        updateDisplay(); // Re-update to show code
     } catch (err) {
         console.error("Could not sync initial match state:", err);
-        // Don't alert here to avoid interrupting the user, but maybe show a small toast later
     }
 }
 
