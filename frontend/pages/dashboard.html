@@ -11,7 +11,7 @@
         }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/style.css?v=2">
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏏</text></svg>">
 </head>
@@ -328,8 +328,8 @@
                         <div class="tab" id="tabInnings2" onclick="switchScorecard(2)">Innings 2</div>
                     </div>
                     <div class="innings-tabs" style="margin-bottom: 1.5rem; justify-content: center; background: rgba(255,255,255,0.02); padding: 5px; border-radius: 12px; border: 1px solid var(--glass-border);">
-                        <div class="tab active" id="viewCard" onclick="toggleMatchView('card')" style="flex: 1; text-align: center; font-size: 0.75rem;">📊 Scorecard</div>
-                        <div class="tab" id="viewOvers" onclick="toggleMatchView('overs')" style="flex: 1; text-align: center; font-size: 0.75rem;">👟 Over-by-Over</div>
+                        <div class="tab active" id="viewCard" onclick="toggleMatchView('card')" style="flex: 1; text-align: center; font-size: 0.75rem;">📊 Live Scorecard</div>
+                        <div class="tab" id="viewOvers" onclick="toggleMatchView('overs')" style="flex: 1; text-align: center; font-size: 0.75rem;">👟 Match Overs History</div>
                     </div>
                     <!-- Scorecard Tables -->
                     <div id="scorecardTableGroup">
@@ -450,7 +450,7 @@
                 </div>
                 <div class="innings-tabs" style="margin-bottom: 1.5rem; justify-content: center; background: rgba(255,255,255,0.02); padding: 5px; border-radius: 12px; border: 1px solid var(--glass-border);">
                     <div class="tab active" id="detailViewCard" onclick="toggleDetailView('card')" style="flex: 1; text-align: center; font-size: 0.75rem;">📊 Scorecard</div>
-                    <div class="tab" id="detailViewOvers" onclick="toggleDetailView('overs')" style="flex: 1; text-align: center; font-size: 0.75rem;">👟 Over-by-Over</div>
+                    <div class="tab" id="detailViewOvers" onclick="toggleDetailView('overs')" style="flex: 1; text-align: center; font-size: 0.75rem;">👟 Overs History</div>
                 </div>
                 <div id="detailScoreTableGroup">
                     <div class="table-container">
@@ -558,7 +558,7 @@
     </div>
 
     <script src="../js/frontend/advanced_features.js"></script>
-    <script src="../js/frontend/script.js?v=3"></script>
+    <script src="../js/frontend/script.js?v=4"></script>
 </body>
 
 </html>
