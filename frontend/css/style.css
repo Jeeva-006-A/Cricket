@@ -492,7 +492,71 @@ select option {
     font-weight: 700;
 }
 
-/* Modal Styles */
+/* Over-by-Over Section Styles */
+.over-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 60px;
+    padding: 1rem;
+    border-bottom: 1px solid var(--glass-border);
+    align-items: center;
+    gap: 1rem;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.over-num-col {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.over-num-text {
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+.over-score-text {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.over-detail-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.over-description {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.over-balls-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.over-total-col {
+    text-align: right;
+}
+
+.over-total-runs {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--primary-color);
+}
+
+.over-total-label {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+/* Modal and other styles... */
 .modal-overlay {
     position: fixed;
     top: 0;

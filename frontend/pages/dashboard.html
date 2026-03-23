@@ -323,49 +323,61 @@
                 </div>
                 <!-- Live Scorecard -->
                 <div class="scorecard-section">
-                    <div class="innings-tabs">
+                    <div class="innings-tabs" id="mainInningsTabs" style="margin-bottom: 0.5rem;">
                         <div class="tab active" id="tabInnings1" onclick="switchScorecard(1)">Innings 1</div>
                         <div class="tab" id="tabInnings2" onclick="switchScorecard(2)">Innings 2</div>
                     </div>
-                    <div class="table-container">
-                        <table class="scorecard-table">
-                            <thead>
-                                <tr>
-                                    <th>Batter</th>
-                                    <th>R</th>
-                                    <th>B</th>
-                                    <th>4s</th>
-                                    <th>6s</th>
-                                    <th>SR</th>
-                                </tr>
-                            </thead>
-                            <tbody id="battingBody"></tbody>
-                            <tfoot>
-                                <tr class="extras-row">
-                                    <td>Extras</td>
-                                    <td colspan="5" id="extrasValue">0</td>
-                                </tr>
-                                <tr class="total-row">
-                                    <td>Total</td>
-                                    <td colspan="5" id="totalScoreValue">0/0 (0.0 ov)</td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                    <div class="innings-tabs" style="margin-bottom: 1.5rem; justify-content: center; background: rgba(255,255,255,0.02); padding: 5px; border-radius: 12px; border: 1px solid var(--glass-border);">
+                        <div class="tab active" id="viewCard" onclick="toggleMatchView('card')" style="flex: 1; text-align: center; font-size: 0.75rem;">📊 Scorecard</div>
+                        <div class="tab" id="viewOvers" onclick="toggleMatchView('overs')" style="flex: 1; text-align: center; font-size: 0.75rem;">👟 Over-by-Over</div>
                     </div>
-                    <div class="table-container">
-                        <table class="scorecard-table">
-                            <thead>
-                                <tr>
-                                    <th>Bowler</th>
-                                    <th>O</th>
-                                    <th>M</th>
-                                    <th>R</th>
-                                    <th>W</th>
-                                    <th>ECO</th>
-                                </tr>
-                            </thead>
-                            <tbody id="bowlingBody"></tbody>
-                        </table>
+                    <!-- Scorecard Tables -->
+                    <div id="scorecardTableGroup">
+                        <div class="table-container">
+                            <table class="scorecard-table">
+                                <thead>
+                                    <tr>
+                                        <th>Batter</th>
+                                        <th>R</th>
+                                        <th>B</th>
+                                        <th>4s</th>
+                                        <th>6s</th>
+                                        <th>SR</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="battingBody"></tbody>
+                                <tfoot>
+                                    <tr class="extras-row">
+                                        <td>Extras</td>
+                                        <td colspan="5" id="extrasValue">0</td>
+                                    </tr>
+                                    <tr class="total-row">
+                                        <td>Total</td>
+                                        <td colspan="5" id="totalScoreValue">0/0 (0.0 ov)</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <div class="table-container">
+                            <table class="scorecard-table">
+                                <thead>
+                                    <tr>
+                                        <th>Bowler</th>
+                                        <th>O</th>
+                                        <th>M</th>
+                                        <th>R</th>
+                                        <th>W</th>
+                                        <th>ECO</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bowlingBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Over-by-Over Container -->
+                    <div id="overByOverContainer" style="display: none;">
+                        <!-- Over rows will be generated here -->
                     </div>
                 </div>
                 <div style="margin-top: 2rem; display: flex; gap: 1rem;">
@@ -432,39 +444,49 @@
                 <div id="detailMatchResult"
                     style="color: var(--secondary-color); font-weight: 700; margin-bottom: 1rem; text-align: center;">
                     Result</div>
-                <div class="innings-tabs">
+                <div class="innings-tabs" style="margin-bottom: 0.5rem;" id="detailInningsTabs">
                     <div class="tab active" id="tabDetailInn1" onclick="switchDetailScorecard(1)">Innings 1</div>
                     <div class="tab" id="tabDetailInn2" onclick="switchDetailScorecard(2)">Innings 2</div>
                 </div>
-                <div class="table-container">
-                    <table class="scorecard-table">
-                        <thead>
-                            <tr>
-                                <th>Batter</th>
-                                <th>R</th>
-                                <th>B</th>
-                                <th>4s</th>
-                                <th>6s</th>
-                                <th>SR</th>
-                            </tr>
-                        </thead>
-                        <tbody id="detailBattingBody"></tbody>
-                    </table>
+                <div class="innings-tabs" style="margin-bottom: 1.5rem; justify-content: center; background: rgba(255,255,255,0.02); padding: 5px; border-radius: 12px; border: 1px solid var(--glass-border);">
+                    <div class="tab active" id="detailViewCard" onclick="toggleDetailView('card')" style="flex: 1; text-align: center; font-size: 0.75rem;">📊 Scorecard</div>
+                    <div class="tab" id="detailViewOvers" onclick="toggleDetailView('overs')" style="flex: 1; text-align: center; font-size: 0.75rem;">👟 Over-by-Over</div>
                 </div>
-                <div class="table-container">
-                    <table class="scorecard-table">
-                        <thead>
-                            <tr>
-                                <th>Bowler</th>
-                                <th>O</th>
-                                <th>M</th>
-                                <th>R</th>
-                                <th>W</th>
-                                <th>ECO</th>
-                            </tr>
-                        </thead>
-                        <tbody id="detailBowlingBody"></tbody>
-                    </table>
+                <div id="detailScoreTableGroup">
+                    <div class="table-container">
+                        <table class="scorecard-table">
+                            <thead>
+                                <tr>
+                                    <th>Batter</th>
+                                    <th>R</th>
+                                    <th>B</th>
+                                    <th>4s</th>
+                                    <th>6s</th>
+                                    <th>SR</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detailBattingBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="table-container">
+                        <table class="scorecard-table">
+                            <thead>
+                                <tr>
+                                    <th>Bowler</th>
+                                    <th>O</th>
+                                    <th>M</th>
+                                    <th>R</th>
+                                    <th>W</th>
+                                    <th>ECO</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detailBowlingBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Historical Over-by-Over Container -->
+                <div id="detailOversContainer" style="display: none;">
+                    <!-- Over rows will be generated here -->
                 </div>
             </section>
         </main>

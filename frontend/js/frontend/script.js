@@ -124,10 +124,11 @@ async function apiCall(endpoint, options = {}) {
 let gameState = {
     teamA: '', teamB: '', maxOvers: 0, currentInnings: 1, toss: '',
     innings: [null,
-        { teamName: '', runs: 0, wickets: 0, balls: 0, batters: [], bowlers: [], extras: { wd: 0, nb: 0, lb: 0, b: 0, total: 0 }, fow: [], strikerIdx: 0, nonStrikerIdx: 1, bowlerIdx: 0, partnershipRuns: 0, partnershipBalls: 0 },
-        { teamName: '', runs: 0, wickets: 0, balls: 0, batters: [], bowlers: [], extras: { wd: 0, nb: 0, lb: 0, b: 0, total: 0 }, fow: [], strikerIdx: 0, nonStrikerIdx: 1, bowlerIdx: 0, partnershipRuns: 0, partnershipBalls: 0 }
+        { teamName: '', runs: 0, wickets: 0, balls: 0, batters: [], bowlers: [], extras: { wd: 0, nb: 0, lb: 0, b: 0, total: 0 }, fow: [], strikerIdx: 0, nonStrikerIdx: 1, bowlerIdx: 0, partnershipRuns: 0, partnershipBalls: 0, overs: [] },
+        { teamName: '', runs: 0, wickets: 0, balls: 0, batters: [], bowlers: [], extras: { wd: 0, nb: 0, lb: 0, b: 0, total: 0 }, fow: [], strikerIdx: 0, nonStrikerIdx: 1, bowlerIdx: 0, partnershipRuns: 0, partnershipBalls: 0, overs: [] }
     ],
     target: null, viewingInnings: 1,
+    currentViewMode: 'card', // 'card' or 'overs'
     freeHit: false,
     drsTeamA: 2,
     drsTeamB: 2,
@@ -495,6 +496,7 @@ async function addRuns(run) {
     if (gameState.freeHit) gameState.freeHit = false;
 
     await checkOverEnd();
+    saveCompletedOver();
     updateDisplay();
     await checkInningsEnd();
 }
@@ -512,6 +514,7 @@ async function addExtra(type) {
     }
     inn.bowlers[inn.bowlerIdx].runs++;
     thisOverBalls.push({ type: 'extra', value: type, label: type });
+    saveCompletedOver();
     updateDisplay();
     await checkInningsEnd();
 }
@@ -720,6 +723,7 @@ async function handleWicketSelect(type) {
         if (outIdx === inn.strikerIdx) inn.strikerIdx = inn.batters.length - 1;
         else inn.nonStrikerIdx = inn.batters.length - 1;
     }
+    saveCompletedOver();
     updateDisplay();
     await checkOverEnd();
     await checkInningsEnd();
@@ -788,9 +792,52 @@ async function checkOverEnd() {
         }
 
         inn.bowlerIdx = idx;
+        saveCompletedOver(); // Save before clearing
         thisOverBalls = [];
         updateDisplay();
     }
+}
+
+function saveCompletedOver() {
+    const inn = gameState.innings[gameState.currentInnings];
+    if (!thisOverBalls || thisOverBalls.length === 0) return;
+
+    const bowler = inn.bowlers[inn.bowlerIdx];
+    const striker = inn.batters[inn.strikerIdx];
+    const nonStriker = inn.batters[inn.nonStrikerIdx];
+    
+    // Correctly determine over number (e.g. 0.1 to 0.6 is over 1)
+    const overNum = Math.floor((inn.balls - 1) / 6) + 1;
+
+    // Calculate runs in this specific over
+    const overRuns = thisOverBalls.reduce((acc, curr) => {
+        if (curr.type === 'run') return acc + curr.value;
+        if (curr.type === 'extra') return acc + 1;
+        return acc;
+    }, 0);
+
+    const overSummary = {
+        overNum: overNum,
+        score: `${inn.runs}-${inn.wickets}`,
+        bowlerName: bowler ? bowler.name : 'Unknown Bowler',
+        strikerName: striker ? striker.name : 'Unknown',
+        nonStrikerName: nonStriker ? nonStriker.name : (gameState.lastManBatting ? 'None' : 'N/A'),
+        balls: JSON.parse(JSON.stringify(thisOverBalls)),
+        overRuns: overRuns
+    };
+
+    // Update existing or push new
+    const existingIdx = inn.overs.findIndex(o => o.overNum === overNum);
+    if (existingIdx !== -1) {
+        inn.overs[existingIdx] = overSummary;
+    } else {
+        inn.overs.push(overSummary);
+    }
+}
+
+function toggleMatchView(mode) {
+    gameState.currentViewMode = mode;
+    updateDisplay();
 }
 
 function updateDisplay() {
@@ -947,6 +994,60 @@ function updateDisplay() {
         }, 0);
         if (document.getElementById('thisOverRuns')) document.getElementById('thisOverRuns').innerText = `RUNS: ${overRuns}`;
     }
+
+    // Toggle Scorecard vs Overs Containers
+    const cardGroup = document.getElementById('scorecardTableGroup');
+    const oversContainer = document.getElementById('overByOverContainer');
+    const viewCardTab = document.getElementById('viewCard');
+    const viewOversTab = document.getElementById('viewOvers');
+
+    if (gameState.currentViewMode === 'overs') {
+        if (cardGroup) cardGroup.style.display = 'none';
+        if (oversContainer) oversContainer.style.display = 'block';
+        if (viewCardTab) viewCardTab.classList.remove('active');
+        if (viewOversTab) viewOversTab.classList.add('active');
+
+        // Render Overs
+        let oversHtml = '';
+        if (vI && vI.overs) {
+            // Show newest overs at top
+            const sortedOvers = [...vI.overs].reverse();
+            sortedOvers.forEach(over => {
+                let ballCapsHtml = '';
+                over.balls.forEach(ball => {
+                    let className = 'ball-circle';
+                    if (ball.type === 'wicket') className += ' ball-wicket';
+                    else if (ball.type === 'run' && ball.value === 4) className += ' ball-boundary-4';
+                    else if (ball.type === 'run' && ball.value === 6) className += ' ball-six';
+                    else if (ball.type === 'extra') className += ' ball-extra';
+                    else if (ball.label === '•') className += ' ball-dot';
+                    ballCapsHtml += `<div class="${className}" style="min-width: 24px; height: 24px; font-size: 0.65rem;">${ball.label}</div>`;
+                });
+
+                oversHtml += `
+                    <div class="over-row">
+                        <div class="over-num-col">
+                            <div class="over-num-text">OV ${over.overNum}</div>
+                            <div class="over-score-text">${over.score}</div>
+                        </div>
+                        <div class="over-detail-col">
+                            <div class="over-description">${over.bowlerName} to ${over.strikerName} & ${over.nonStrikerName}</div>
+                            <div class="over-balls-row">${ballCapsHtml}</div>
+                        </div>
+                        <div class="over-total-col">
+                            <div class="over-total-runs">${over.overRuns}</div>
+                            <div class="over-total-label">Runs</div>
+                        </div>
+                    </div>`;
+            });
+        }
+        if (oversContainer) oversContainer.innerHTML = oversHtml || '<div style="text-align:center; padding: 2rem; color: var(--text-secondary);">No overs completed yet.</div>';
+    } else {
+        if (cardGroup) cardGroup.style.display = 'block';
+        if (oversContainer) oversContainer.style.display = 'none';
+        if (viewCardTab) viewCardTab.classList.add('active');
+        if (viewOversTab) viewOversTab.classList.remove('active');
+    }
 }
 
 async function checkInningsEnd() {
@@ -963,8 +1064,12 @@ async function checkInningsEnd() {
             const reason = isAllOut ? 'All Out!' : 'Overs Completed!';
             gameState.lastManBatting = false; // Reset for next innings
             await showAlert(`${reason}\nTarget: ${gameState.target}\n\nStarting 2nd Innings...`, 'Innings Break');
+            saveCompletedOver(); // Save the last (possibly incomplete) over
             setTimeout(() => startSecondInnings(), 2000);
-        } else endMatch();
+        } else {
+            saveCompletedOver(); // Save final over
+            endMatch();
+        }
     }
 }
 
@@ -1186,51 +1291,112 @@ function showMatchDetail(idx) {
 
     // Storing full data temporarily to switch tabs
     window.currentDetailInnings = m.score_data;
+    window.currentDetailInningsNum = 1;
+    window.currentDetailViewMode = 'card';
     switchDetailScorecard(1);
     switchScreen('matchDetailScreen');
 }
 
+function toggleDetailView(mode) {
+    window.currentDetailViewMode = mode;
+    switchDetailScorecard(window.currentDetailInningsNum);
+}
+
 function switchDetailScorecard(innIdx) {
+    window.currentDetailInningsNum = innIdx;
     const inn = window.currentDetailInnings[innIdx];
 
     document.getElementById('tabDetailInn1').classList.toggle('active', innIdx === 1);
     document.getElementById('tabDetailInn2').classList.toggle('active', innIdx === 2);
 
+    const cardGroup = document.getElementById('detailScoreTableGroup');
+    const oversContainer = document.getElementById('detailOversContainer');
+    const viewCardTab = document.getElementById('detailViewCard');
+    const viewOversTab = document.getElementById('detailViewOvers');
+
     if (!inn) {
+        if (cardGroup) cardGroup.style.display = 'block'; // Show empty group
+        if (oversContainer) oversContainer.style.display = 'none';
         document.getElementById('detailBattingBody').innerHTML = '<tr><td colspan="6" style="text-align:center;">Innings not played</td></tr>';
         document.getElementById('detailBowlingBody').innerHTML = '';
         return;
     }
 
-    let bHtml = '';
-    if (Array.isArray(inn.batters)) {
-        inn.batters.forEach(bat => {
-            const sr = bat.balls > 0 ? (bat.runs / bat.balls * 100).toFixed(2) : '0.00';
-            const outDescDisplay = bat.isOut ? `<div style="font-size: 0.7rem; color: var(--text-secondary);">${bat.outDesc}</div>` : (bat.outDesc === 'not out' ? '<div style="font-size: 0.7rem; color: var(--primary-color);">not out</div>' : '');
+    if (window.currentDetailViewMode === 'overs') {
+        if (cardGroup) cardGroup.style.display = 'none';
+        if (oversContainer) oversContainer.style.display = 'block';
+        if (viewCardTab) viewCardTab.classList.remove('active');
+        if (viewOversTab) viewOversTab.classList.add('active');
 
-            bHtml += `<tr>
-                <td>
-                    <div style="font-weight: 600;">${bat.name}</div>
-                    ${outDescDisplay}
-                </td>
-                <td>${bat.runs}</td>
-                <td>${bat.balls}</td>
-                <td>${bat.fours}</td>
-                <td>${bat.sixes}</td>
-                <td>${sr}</td>
-            </tr>`;
-        });
-    }
-    document.getElementById('detailBattingBody').innerHTML = bHtml || '<tr><td colspan="6">No batting data</td></tr>';
+        let oversHtml = '';
+        if (inn.overs) {
+            const sortedOvers = [...inn.overs].reverse();
+            sortedOvers.forEach(over => {
+                let ballCapsHtml = '';
+                over.balls.forEach(ball => {
+                    let className = 'ball-circle';
+                    if (ball.type === 'wicket') className += ' ball-wicket';
+                    else if (ball.type === 'run' && ball.value === 4) className += ' ball-boundary-4';
+                    else if (ball.type === 'run' && ball.value === 6) className += ' ball-six';
+                    else if (ball.type === 'extra') className += ' ball-extra';
+                    else if (ball.label === '•') className += ' ball-dot';
+                    ballCapsHtml += `<div class="${className}" style="min-width: 24px; height: 24px; font-size: 0.65rem;">${ball.label}</div>`;
+                });
 
-    let bowlHtml = '';
-    if (Array.isArray(inn.bowlers)) {
-        inn.bowlers.forEach(bowl => {
-            const eco = bowl.balls > 0 ? (bowl.runs / (bowl.balls / 6)).toFixed(2) : '0.00';
-            bowlHtml += `<tr><td>${bowl.name}</td><td>${Math.floor(bowl.balls / 6)}.${bowl.balls % 6}</td><td>${bowl.maidens}</td><td>${bowl.runs}</td><td>${bowl.wickets}</td><td>${eco}</td></tr>`;
-        });
+                oversHtml += `
+                    <div class="over-row">
+                        <div class="over-num-col">
+                            <div class="over-num-text">OV ${over.overNum}</div>
+                            <div class="over-score-text">${over.score}</div>
+                        </div>
+                        <div class="over-detail-col">
+                            <div class="over-description">${over.bowlerName} to ${over.strikerName} & ${over.nonStrikerName}</div>
+                            <div class="over-balls-row">${ballCapsHtml}</div>
+                        </div>
+                        <div class="over-total-col">
+                            <div class="over-total-runs">${over.overRuns}</div>
+                            <div class="over-total-label">Runs</div>
+                        </div>
+                    </div>`;
+            });
+        }
+        oversContainer.innerHTML = oversHtml || '<div style="text-align:center; padding: 2rem; color: var(--text-secondary);">No over data found.</div>';
+    } else {
+        if (cardGroup) cardGroup.style.display = 'block';
+        if (oversContainer) oversContainer.style.display = 'none';
+        if (viewCardTab) viewCardTab.classList.add('active');
+        if (viewOversTab) viewOversTab.classList.remove('active');
+
+        let bHtml = '';
+        if (Array.isArray(inn.batters)) {
+            inn.batters.forEach(bat => {
+                const sr = bat.balls > 0 ? (bat.runs / bat.balls * 100).toFixed(2) : '0.00';
+                const outDescDisplay = bat.isOut ? `<div style="font-size: 0.7rem; color: var(--text-secondary);">${bat.outDesc}</div>` : (bat.outDesc === 'not out' ? '<div style="font-size: 0.7rem; color: var(--primary-color);">not out</div>' : '');
+
+                bHtml += `<tr>
+                    <td>
+                        <div style="font-weight: 600;">${bat.name}</div>
+                        ${outDescDisplay}
+                    </td>
+                    <td>${bat.runs}</td>
+                    <td>${bat.balls}</td>
+                    <td>${bat.fours}</td>
+                    <td>${bat.sixes}</td>
+                    <td>${sr}</td>
+                </tr>`;
+            });
+        }
+        document.getElementById('detailBattingBody').innerHTML = bHtml || '<tr><td colspan="6">No batting data</td></tr>';
+
+        let bowlHtml = '';
+        if (Array.isArray(inn.bowlers)) {
+            inn.bowlers.forEach(bowl => {
+                const eco = bowl.balls > 0 ? (bowl.runs / (bowl.balls / 6)).toFixed(2) : '0.00';
+                bowlHtml += `<tr><td>${bowl.name}</td><td>${Math.floor(bowl.balls / 6)}.${bowl.balls % 6}</td><td>${bowl.maidens}</td><td>${bowl.runs}</td><td>${bowl.wickets}</td><td>${eco}</td></tr>`;
+            });
+        }
+        document.getElementById('detailBowlingBody').innerHTML = bowlHtml || '<tr><td colspan="6">No bowling data</td></tr>';
     }
-    document.getElementById('detailBowlingBody').innerHTML = bowlHtml || '<tr><td colspan="6">No bowling data</td></tr>';
 }
 
 function switchScreen(id) {
