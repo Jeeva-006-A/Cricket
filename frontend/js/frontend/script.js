@@ -495,8 +495,8 @@ async function addRuns(run) {
     // Clear Free Hit after the ball
     if (gameState.freeHit) gameState.freeHit = false;
 
-    await checkOverEnd();
     saveCompletedOver();
+    await checkOverEnd();
     updateDisplay();
     await checkInningsEnd();
 }
@@ -662,8 +662,11 @@ async function handleWicketSelect(type) {
             let fielder = '';
             if (type === 'Caught' || type === 'Stumped') {
                 const label = type === 'Caught' ? 'Caught By (Fielder)' : 'Stumped By (Keeper)';
-                fielder = await requestInput(label, 'Select Fielder', bowlingSquad);
-            }
+            // Filter out the bowler from fields/keeper list
+            const currentBowlerName = bowler.name.trim().toLowerCase();
+            const fielderOptions = bowlingSquad.filter(p => p.trim().toLowerCase() !== currentBowlerName);
+            fielder = await requestInput(label, 'Select Fielder', fielderOptions);
+        }
 
             if (type === 'Bowled') bOut.outDesc = `b ${bowler.name}`;
             else if (type === 'Caught') bOut.outDesc = `c ${fielder || 'Fielder'} b ${bowler.name}`;
@@ -820,6 +823,8 @@ function saveCompletedOver() {
         overNum: overNum,
         score: `${inn.runs}-${inn.wickets}`,
         bowlerName: bowler ? bowler.name : 'Unknown Bowler',
+        bowlerStats: bowler ? `${bowler.wickets}-${bowler.runs} (${Math.floor(bowler.balls / 6)}.${bowler.balls % 6})` : '',
+        partnership: `${inn.partnershipRuns} (${inn.partnershipBalls})`,
         strikerName: striker ? striker.name : 'Unknown',
         nonStrikerName: nonStriker ? nonStriker.name : (gameState.lastManBatting ? 'None' : 'N/A'),
         balls: JSON.parse(JSON.stringify(thisOverBalls)),
@@ -1031,7 +1036,10 @@ function updateDisplay() {
                             <div class="over-score-text">${over.score}</div>
                         </div>
                         <div class="over-detail-col">
-                            <div class="over-description">${over.bowlerName} to ${over.strikerName} & ${over.nonStrikerName}</div>
+                            <div class="over-description">
+                                <b>${over.bowlerName}</b> (${over.bowlerStats}) to <b>${over.strikerName}</b> & <b>${over.nonStrikerName}</b>
+                                <div style="font-size: 0.75rem; color: var(--primary-color); margin-top: 2px;">Partnership: ${over.partnership}</div>
+                            </div>
                             <div class="over-balls-row">${ballCapsHtml}</div>
                         </div>
                         <div class="over-total-col">
@@ -1350,7 +1358,10 @@ function switchDetailScorecard(innIdx) {
                             <div class="over-score-text">${over.score}</div>
                         </div>
                         <div class="over-detail-col">
-                            <div class="over-description">${over.bowlerName} to ${over.strikerName} & ${over.nonStrikerName}</div>
+                            <div class="over-description">
+                                <b>${over.bowlerName}</b> (${over.bowlerStats || 'N/A'}) to <b>${over.strikerName}</b> & <b>${over.nonStrikerName}</b>
+                                <div style="font-size: 0.75rem; color: var(--primary-color); margin-top: 2px;">Partnership: ${over.partnership || 'N/A'}</div>
+                            </div>
                             <div class="over-balls-row">${ballCapsHtml}</div>
                         </div>
                         <div class="over-total-col">
