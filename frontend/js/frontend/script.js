@@ -135,7 +135,9 @@ let gameState = {
     isSuperOver: false,
     matchId: null,
     matchCode: '',
-    isViewer: false
+    isViewer: false,
+    playersPerTeam: 11,
+    lastManBatting: false
 };
 
 
@@ -342,6 +344,7 @@ function generateSquadInputs(preserve = false) {
 
 function goToPlayerSelection() {
     const count = parseInt(document.getElementById('playersPerTeam').value) || 11;
+    gameState.playersPerTeam = count;
     gameState.squads = { A: [], B: [] };
 
     const capAIdx = document.querySelector('input[name="captainA"]:checked')?.value || 1;
@@ -485,7 +488,7 @@ async function addRuns(run) {
     inn.partnershipBalls++;
     if (run === 4) inn.batters[inn.strikerIdx].fours++;
     if (run === 6) inn.batters[inn.strikerIdx].sixes++;
-    thisOverBalls.push({ type: 'run', value: run, label: run === 0 ? '.' : run.toString() });
+    thisOverBalls.push({ type: 'run', value: run, label: run === 0 ? '•' : run.toString() });
     if (run % 2 !== 0) rotateStrike();
 
     // Clear Free Hit after the ball
@@ -631,6 +634,10 @@ async function handleWicketSelect(type) {
 
     const bOut = inn.batters[outIdx];
 
+    // Get Bowling Squad for fielder dropdowns
+    const battingTeamNameNow = inn.teamName;
+    const bowlingSquad = (battingTeamNameNow === gameState.teamA) ? gameState.squads.B : gameState.squads.A;
+
     // Reset partnership
     inn.partnershipRuns = 0;
     inn.partnershipBalls = 0;
@@ -651,8 +658,8 @@ async function handleWicketSelect(type) {
             bOut.balls++;
             let fielder = '';
             if (type === 'Caught' || type === 'Stumped') {
-                const label = type === 'Caught' ? 'Fielder Name' : 'Wicket Keeper Name';
-                fielder = await requestInput(label, 'Enter name');
+                const label = type === 'Caught' ? 'Caught By (Fielder)' : 'Stumped By (Keeper)';
+                fielder = await requestInput(label, 'Select Fielder', bowlingSquad);
             }
 
             if (type === 'Bowled') bOut.outDesc = `b ${bowler.name}`;
@@ -665,7 +672,7 @@ async function handleWicketSelect(type) {
             bowler.balls++;
             inn.balls++;
         } else {
-            let fielder = await requestInput('Run Out By (Fielder)', 'Enter name');
+            let fielder = await requestInput('Run Out By (Fielder)', 'Select Fielder', bowlingSquad);
             bOut.outDesc = `run out (${fielder || 'Fielder'})`;
             bowler.balls++;
             inn.balls++;
@@ -678,20 +685,36 @@ async function handleWicketSelect(type) {
     const label = type === 'Retired Hurt' ? 'Ret' : 'W';
     thisOverBalls.push({ type: 'wicket', value: label, label: label });
 
-    if (inn.wickets < 10) { // Always ask for new batter unless all out
+    if (inn.wickets < gameState.playersPerTeam && !gameState.lastManBatting) {
+        if (inn.wickets === gameState.playersPerTeam - 1) {
+            const allowLastMan = await showConfirm(`${inn.wickets} wickets down. Should the last man bat alone?`, "Last Man Batting");
+            if (allowLastMan) {
+                gameState.lastManBatting = true;
+                await showAlert('Last man standing mode active!', 'Last Man');
+                // The surviving player stays. No new batter needed.
+                // Ensure the survivor is the striker
+                if (outIdx === inn.strikerIdx) {
+                    inn.strikerIdx = inn.nonStrikerIdx;
+                }
+                updateDisplay();
+                await checkOverEnd();
+                return;
+            } else {
+                updateDisplay();
+                await checkInningsEnd();
+                return;
+            }
+        }
+
         // Get Batting Squad
         const battingTeamNameNow = gameState.innings[gameState.currentInnings].teamName;
         const battingSquadFull = (battingTeamNameNow === gameState.teamA) ? gameState.squads.A : gameState.squads.B;
 
         // Filter out players who are already out or currently batting
-        // Get list of names already in inn.batters
-        // Normalize names for comparison (trim)
         const existingBatters = inn.batters.map(b => b.name.trim());
         const battingSquad = battingSquadFull.filter(p => !existingBatters.includes(p.trim()));
 
         let n = await requestInput('New Batter Name', 'Select Batter', battingSquad);
-        // Logic to pick from squad if available, else manual
-        // For now manual entry or from remaining squad logic could be added later
 
         inn.batters.push({ name: n || `Batter ${inn.batters.length + 1}`, runs: 0, balls: 0, fours: 0, sixes: 0, outDesc: 'not out', isOut: false });
         if (outIdx === inn.strikerIdx) inn.strikerIdx = inn.batters.length - 1;
@@ -703,6 +726,7 @@ async function handleWicketSelect(type) {
 }
 
 function rotateStrike() {
+    if (gameState.lastManBatting) return;
     const inn = gameState.innings[gameState.currentInnings];
     [inn.strikerIdx, inn.nonStrikerIdx] = [inn.nonStrikerIdx, inn.strikerIdx];
 }
@@ -847,8 +871,16 @@ function updateDisplay() {
         if (document.getElementById('strikerRuns')) document.getElementById('strikerRuns').innerText = `${inn.batters[inn.strikerIdx].runs}(${inn.batters[inn.strikerIdx].balls})`;
     }
     if (inn.batters && inn.batters[inn.nonStrikerIdx]) {
-        if (document.getElementById('nonStrikerName')) document.getElementById('nonStrikerName').innerText = inn.batters[inn.nonStrikerIdx].name;
-        if (document.getElementById('nonStrikerRuns')) document.getElementById('nonStrikerRuns').innerText = `${inn.batters[inn.nonStrikerIdx].runs}(${inn.batters[inn.nonStrikerIdx].balls})`;
+        if (document.getElementById('nonStrikerName')) {
+            document.getElementById('nonStrikerName').innerText = gameState.lastManBatting ? 'N/A' : inn.batters[inn.nonStrikerIdx].name;
+        }
+        if (document.getElementById('nonStrikerRuns')) {
+            document.getElementById('nonStrikerRuns').innerText = gameState.lastManBatting ? '-' : `${inn.batters[inn.nonStrikerIdx].runs}(${inn.batters[inn.nonStrikerIdx].balls})`;
+        }
+        if (document.getElementById('nonStrikerRow')) {
+            document.getElementById('nonStrikerRow').style.opacity = gameState.lastManBatting ? '0.3' : '1';
+            document.getElementById('nonStrikerRow').style.pointerEvents = gameState.lastManBatting ? 'none' : 'auto';
+        }
     }
     const b = inn.bowlers && inn.bowlers[inn.bowlerIdx];
     if (b) {
@@ -890,15 +922,46 @@ function updateDisplay() {
         });
     }
     document.getElementById('bowlingBody').innerHTML = bowlHtml;
+
+    // Ball Capsules Update
+    const ballCapsContainer = document.getElementById('ballCapsules');
+    if (ballCapsContainer) {
+        let ballsHtml = '';
+        thisOverBalls.forEach(ball => {
+            let className = 'ball-circle';
+            if (ball.type === 'wicket') className += ' ball-wicket';
+            else if (ball.type === 'run' && ball.value === 4) className += ' ball-boundary-4';
+            else if (ball.type === 'run' && ball.value === 6) className += ' ball-six';
+            else if (ball.type === 'extra') className += ' ball-extra';
+            else if (ball.label === '•') className += ' ball-dot';
+
+            ballsHtml += `<div class="${className}">${ball.label}</div>`;
+        });
+        ballCapsContainer.innerHTML = ballsHtml;
+
+        // Update thisOverRuns
+        const overRuns = thisOverBalls.reduce((acc, curr) => {
+            if (curr.type === 'run') return acc + curr.value;
+            if (curr.type === 'extra') return acc + 1;
+            return acc;
+        }, 0);
+        if (document.getElementById('thisOverRuns')) document.getElementById('thisOverRuns').innerText = `RUNS: ${overRuns}`;
+    }
 }
 
 async function checkInningsEnd() {
     const inn = gameState.innings[gameState.currentInnings];
+    const totalPlayers = gameState.playersPerTeam;
+
     if (gameState.currentInnings === 2 && gameState.target && inn.runs >= gameState.target) return endMatch();
-    if (inn.balls >= gameState.maxOvers * 6 || inn.wickets >= 10) {
+
+    const isAllOut = gameState.lastManBatting ? (inn.wickets >= totalPlayers) : (inn.wickets >= totalPlayers - 1);
+
+    if (inn.balls >= gameState.maxOvers * 6 || isAllOut) {
         if (gameState.currentInnings === 1) {
             gameState.target = inn.runs + 1;
-            const reason = inn.wickets >= 10 ? 'All Out!' : 'Overs Completed!';
+            const reason = isAllOut ? 'All Out!' : 'Overs Completed!';
+            gameState.lastManBatting = false; // Reset for next innings
             await showAlert(`${reason}\nTarget: ${gameState.target}\n\nStarting 2nd Innings...`, 'Innings Break');
             setTimeout(() => startSecondInnings(), 2000);
         } else endMatch();
@@ -1021,8 +1084,25 @@ function endMatch() { calculateResult(); switchScreen('resultScreen'); }
 
 async function calculateResult() {
     const s1 = gameState.innings[1]; const s2 = gameState.innings[2];
-    let res = (s2.runs >= gameState.target) ? `${gameState.teamB} wins` : (s1.runs > s2.runs) ? `${gameState.teamA} wins` : "Match Tie";
+    let res = "";
+    if (s2.runs >= gameState.target) {
+        res = `${s2.teamName} wins`;
+    } else if (s1.runs > s2.runs) {
+        res = `${s1.teamName} wins`;
+    } else {
+        res = "Match Tie";
+    }
     document.getElementById('matchOutcome').innerText = res.toUpperCase();
+
+    // Update Result Screen Labels and Scores
+    if (document.getElementById('team1Label')) document.getElementById('team1Label').innerText = s1.teamName;
+    if (document.getElementById('team1FinalScore')) {
+        document.getElementById('team1FinalScore').innerText = `${s1.runs}/${s1.wickets} (${Math.floor(s1.balls / 6)}.${s1.balls % 6} ov)`;
+    }
+    if (document.getElementById('team2Label')) document.getElementById('team2Label').innerText = s2.teamName;
+    if (document.getElementById('team2FinalScore')) {
+        document.getElementById('team2FinalScore').innerText = `${s2.runs}/${s2.wickets} (${Math.floor(s2.balls / 6)}.${s2.balls % 6} ov)`;
+    }
 
     // Show Super Over button if match is tied
     const superOverBtn = document.getElementById('superOverBtn');

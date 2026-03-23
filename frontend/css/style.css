@@ -11,6 +11,12 @@
     --text-primary: #f8fafc;
     --text-secondary: #94a3b8;
     --danger: #ff4444;
+    /* Custom colors for bowling animation */
+    --cb-ball-bg: rgba(255, 255, 255, 0.15);
+    --cb-ball-text: #94a3b8;
+    --cb-four-bg: #1e40af;
+    --cb-six-bg: #5b21b6;
+    --cb-wicket-bg: #b91c1c;
 }
 
 * {
@@ -281,34 +287,61 @@ select option {
 .ball-capsules {
     display: flex;
     gap: 0.5rem;
-    overflow-x: auto;
+    flex-wrap: wrap; /* Added as per snippet */
     padding-bottom: 0.5rem;
 }
 
 .ball-circle {
-    min-width: 35px;
-    height: 35px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 50%;
+    min-width: 28px;
+    padding: 6px 8px; /* py-[6px] px-[8px] */
+    height: 28px;
+    background: var(--cb-ball-bg);
+    color: var(--text-primary);
+    border-radius: 4px; /* "rounded" in Tailwind is 4px */
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.8rem;
-    font-weight: bold;
+    font-size: 0.75rem; /* text-xs */
+    font-weight: 600; /* font-semibold */
+    line-height: 12px; /* leading-[12px] */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: ballAppear 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes ballAppear {
+    0% {
+        opacity: 0;
+        transform: scale(0.5) translateY(10px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 }
 
 .ball-wicket {
-    background: var(--danger);
+    background: var(--cb-wicket-bg) !important;
+    color: white !important;
 }
 
-.ball-boundary {
-    background: var(--primary-color);
-    color: var(--bg-dark);
+.ball-boundary-4 {
+    background: var(--cb-four-bg) !important;
+    color: white !important;
 }
 
 .ball-six {
-    background: var(--secondary-color);
-    color: var(--bg-dark);
+    background: var(--cb-six-bg) !important;
+    color: white !important;
+}
+
+.ball-extra {
+    background: rgba(255, 215, 0, 0.2);
+    color: var(--secondary-color);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.ball-dot {
+    color: var(--cb-ball-text);
 }
 
 /* Match Summary Display */
