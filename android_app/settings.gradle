@@ -1,0 +1,2 @@
+rootProject.name = "Turf Cricket Scorer"
+include ':app'

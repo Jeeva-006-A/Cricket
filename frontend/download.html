@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Turf Cricket Scorer App</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #38bdf8;
+            --secondary: #0ea5e9;
+            --dark: #0f172a;
+            --darker: #020617;
+            --text: #f1f5f9;
+            --glass: rgba(30, 41, 59, 0.7);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--darker);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            background: radial-gradient(circle at top right, #1e293b, #020617);
+        }
+
+        .container {
+            text-align: center;
+            padding: 3rem;
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border-radius: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            max-width: 500px;
+            width: 90%;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .icon-box {
+            font-size: 4rem;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            filter: drop-shadow(0 0 15px rgba(56, 189, 248, 0.4));
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #fff, var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            color: #94a3b8;
+            margin-bottom: 2.5rem;
+            line-height: 1.6;
+        }
+
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 1.2rem 2.5rem;
+            border-radius: 1rem;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 15px -3px rgba(56, 189, 248, 0.3);
+        }
+
+        .download-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 25px -5px rgba(56, 189, 248, 0.4);
+            filter: brightness(1.1);
+        }
+
+        .download-btn i {
+            font-size: 1.4rem;
+        }
+
+        .features {
+            margin-top: 3rem;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .feature-item {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .feature-item i {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+            font-size: 1.2rem;
+        }
+
+        /* Decorative blobs */
+        .blob {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: var(--primary);
+            filter: blur(80px);
+            opacity: 0.1;
+            z-index: -1;
+            border-radius: 50%;
+        }
+
+        .blob-1 { top: 10%; left: 10%; }
+        .blob-2 { bottom: 10%; right: 10%; }
+    </style>
+</head>
+<body>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <div class="container">
+        <div class="icon-box">
+            <i class="fas fa-cricket-bat-ball"></i>
+        </div>
+        <h1>Turf Cricket Scorer</h1>
+        <p>Take your cricket scoring to the next level. Fast, clean, and built for gully cricket stars.</p>
+        
+        <!-- The APK link goes here -->
+        <a href="/turf-cricket-scorer.apk" class="download-btn">
+            <i class="fab fa-android"></i>
+            Download APK
+        </a>
+
+        <div class="features">
+            <div class="feature-item">
+                <i class="fas fa-bolt"></i>
+                Fast UI
+            </div>
+            <div class="feature-item">
+                <i class="fas fa-signal"></i>
+                Real-time
+            </div>
+            <div class="feature-item">
+                <i class="fas fa-shield-halved"></i>
+                Secure
+            </div>
+        </div>
+    </div>
+</body>
+</html>
