@@ -15,7 +15,7 @@ public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private ProgressBar progressBar;
     // Replace with your actual deployed website URL
-    private final String URL = "https://cricscore-pro.vercel.app"; 
+    private final String URL = "https://cricket-three-sigma.vercel.app"; 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
