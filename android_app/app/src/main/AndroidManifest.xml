@@ -8,7 +8,6 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="Turf Cricket Scorer"
-        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.TurfCricketScorer"
         android:usesCleartextTraffic="true">
